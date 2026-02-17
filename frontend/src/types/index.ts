@@ -1,0 +1,78 @@
+export interface ServiceRequirement {
+    id: string;
+    service_id: string;
+    min_ram_mb: number;
+    recommended_ram_mb: number;
+    min_cpu_cores: number;
+    recommended_cpu_cores: number;
+    min_storage_gb: number;
+    recommended_storage_gb: number;
+}
+
+export interface Service {
+    id: string;
+    name: string;
+    description: string;
+    category: string;
+    icon: string;
+    official_website: string;
+    docker_support: boolean;
+    is_active: boolean;
+    requirements: ServiceRequirement | null;
+    created_at: string;
+}
+
+export interface Spec {
+    total_ram_mb: number;
+    total_cpu_cores: number;
+    total_storage_gb: number;
+    cpu_suggestion: string;
+    ram_suggestion: string;
+    storage_suggestion: string;
+    network_suggestion: string;
+    rationale: string;
+    estimated_cost_min: number;
+    estimated_cost_max: number;
+}
+
+export interface RecommendationResponse {
+    minimal_spec: Spec;
+    recommended_spec: Spec;
+    optimal_spec: Spec;
+    selected_services: Service[];
+    summary: string;
+}
+
+export interface PurchaseLink {
+    store: string;
+    url: string;
+}
+
+export interface ShoppingListItem {
+    name: string;
+    category: string;
+    estimated_price: number;
+    priority: string;
+    purchase_links: PurchaseLink[];
+}
+
+export interface ShoppingListResponse {
+    items: ShoppingListItem[];
+    total_estimated_cost: number;
+    recommendation_id: string;
+}
+
+export interface User {
+    id: string;
+    email: string;
+    name: string;
+    avatar_url: string;
+}
+
+export interface UserSelection {
+    id: string;
+    user_id: string;
+    service_id: string;
+    service: Service;
+    created_at: string;
+}
