@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import type { Spec, ShoppingListItem as ShoppingItemType } from '../types';
+import type { Service, Spec, ShoppingListItem as ShoppingItemType } from '../types';
 import './ShoppingListPage.css';
 
 const CATEGORY_ORDER = ['cpu', 'ram', 'storage', 'case', 'network', 'accessories'];
@@ -15,7 +15,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 function ShoppingListPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const state = location.state as { spec?: Spec; tier?: string } | undefined;
+  const state = location.state as { spec?: Spec; tier?: string; services?: Service[] } | undefined;
 
   if (!state?.spec) {
     return (
@@ -104,6 +104,16 @@ function ShoppingListPage() {
         </button>
         <button className="btn-secondary" onClick={() => window.print()}>
           🖨️ Print List
+        </button>
+        <button
+          className="btn-primary btn-large"
+          onClick={() =>
+            navigate('/checklist', {
+              state: { services: state?.services || [], tier: state?.tier },
+            })
+          }
+        >
+          What's Next? → Setup Guide
         </button>
       </div>
     </div>

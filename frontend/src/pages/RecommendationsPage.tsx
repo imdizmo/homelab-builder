@@ -45,8 +45,15 @@ function RecommendationsPage() {
 
   function goToShoppingList() {
     const spec = getActiveSpec();
-    if (spec) {
-      navigate('/shopping-list', { state: { spec, tier: activeTier, serviceIds } });
+    if (spec && recommendation) {
+      navigate('/shopping-list', {
+        state: {
+          spec,
+          tier: activeTier,
+          serviceIds,
+          services: recommendation.selected_services,
+        },
+      });
     }
   }
 
