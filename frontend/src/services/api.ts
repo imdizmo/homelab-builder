@@ -1,0 +1,67 @@
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+    const token = localStorage.getItem('auth_token');
+    const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options?.headers,
+    };
+
+    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+
+    if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: 'Request failed' }));
+        throw new Error(error.error || `HTTP ${res.status}`);
+    }
+
+    return res.json();
+}
+
+export const api = {
+    // Services
+    getServices: () =>
+        request<{ data: import('../types').Service[] }>('/api/services'),
+
+    getService: (id: string) =>
+        request<{ data: import('../types').Service }>(`/api/services/${id}`),
+
+    // Recommendations
+    getRecommendations: (serviceIds: string[]) =>
+        request<{ data: import('../types').RecommendationResponse }>('/api/recommendations', {
+            method: 'POST',
+            body: JSON.stringify({ service_ids: serviceIds }),
+        }),
+
+    // Shopping List
+    getShoppingList: (recommendationId: string) =>
+        request<{ data: import('../types').ShoppingListResponse }>('/api/shopping-list', {
+            method: 'POST',
+            body: JSON.stringify({ recommendation_id: recommendationId }),
+        }),
+
+    // Auth
+    googleLogin: (data: { google_id: string; email: string; name: string; avatar_url: string }) =>
+        request<{ data: { token: string; user: import('../types').User } }>('/auth/google', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        }),
+
+    getCurrentUser: () =>
+        request<{ data: import('../types').User }>('/auth/me'),
+
+    // Selections
+    getSelections: () =>
+        request<{ data: import('../types').UserSelection[] }>('/api/selections'),
+
+    addSelection: (serviceId: string) =>
+        request<{ data: import('../types').UserSelection }>('/api/selections', {
+            method: 'POST',
+            body: JSON.stringify({ service_id: serviceId }),
+        }),
+
+    removeSelection: (selectionId: string) =>
+        request<{ message: string }>(`/api/selections/${selectionId}`, {
+            method: 'DELETE',
+        }),
+};
