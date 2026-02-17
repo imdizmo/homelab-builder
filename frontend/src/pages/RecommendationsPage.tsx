@@ -144,8 +144,36 @@ function RecommendationsPage() {
         <div className="spec-rationale">
           <h3>About this tier</h3>
           <p>{spec.rationale}</p>
+          {recommendation.tier_comparison && (
+            <p className="tier-comparison">{recommendation.tier_comparison}</p>
+          )}
         </div>
       </div>
+
+      {/* Service Insights */}
+      {recommendation.insights && recommendation.insights.length > 0 && (
+        <div className="service-insights">
+          <h3>💡 Service Insights</h3>
+          {recommendation.heaviest_service && (
+            <div className="heaviest-callout">
+              ⚠️ {recommendation.heaviest_service}
+            </div>
+          )}
+          <div className="insights-list">
+            {recommendation.insights.map((insight) => (
+              <div key={insight.name} className="insight-item">
+                <div className="insight-header">
+                  <span className="insight-name">{insight.name}</span>
+                  {insight.ram_percentage > 0 && (
+                    <span className="insight-pct">{insight.ram_percentage}% RAM</span>
+                  )}
+                </div>
+                <p className="insight-note">{insight.note}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="selected-services-summary">
         <h3>Selected Services ({recommendation.selected_services.length})</h3>

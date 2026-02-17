@@ -35,12 +35,21 @@ export interface Spec {
     estimated_cost_max: number;
 }
 
+export interface ServiceInsight {
+    name: string;
+    note: string;
+    ram_percentage: number;
+}
+
 export interface RecommendationResponse {
     minimal_spec: Spec;
     recommended_spec: Spec;
     optimal_spec: Spec;
     selected_services: Service[];
     summary: string;
+    insights: ServiceInsight[];
+    heaviest_service: string;
+    tier_comparison: string;
 }
 
 export interface PurchaseLink {
