@@ -4,6 +4,7 @@ import ServicesPage from './pages/ServicesPage';
 import RecommendationsPage from './pages/RecommendationsPage';
 import ShoppingListPage from './pages/ShoppingListPage';
 import ChecklistPage from './pages/ChecklistPage';
+import AdminPage from './pages/AdminPage';
 import Navbar from './components/Navbar';
 import './App.css';
 
@@ -19,6 +20,7 @@ function App() {
             <Route path="/recommendations" element={<RecommendationsPage />} />
             <Route path="/shopping-list" element={<ShoppingListPage />} />
             <Route path="/checklist" element={<ChecklistPage />} />
+            <Route path="/admin" element={<AdminPage />} />
           </Routes>
         </main>
       </div>

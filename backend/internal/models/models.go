@@ -13,6 +13,7 @@ type User struct {
 	Email     string         `gorm:"uniqueIndex;not null" json:"email"`
 	Name      string         `gorm:"not null;default:''" json:"name"`
 	AvatarURL string         `gorm:"default:''" json:"avatar_url,omitempty"`
+	IsAdmin   bool           `gorm:"default:false" json:"is_admin"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
@@ -33,15 +34,15 @@ type Service struct {
 }
 
 type ServiceRequirement struct {
-	ID                  uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
-	ServiceID           uuid.UUID `gorm:"type:uuid;uniqueIndex;not null" json:"service_id"`
-	MinRAMMB            int       `gorm:"column:min_ram_mb;not null;default:256" json:"min_ram_mb"`
-	RecommendedRAMMB    int       `gorm:"column:recommended_ram_mb;not null;default:512" json:"recommended_ram_mb"`
-	MinCPUCores         float32   `gorm:"not null;default:0.5" json:"min_cpu_cores"`
-	RecommendedCPUCores float32   `gorm:"not null;default:1.0" json:"recommended_cpu_cores"`
-	MinStorageGB        int       `gorm:"not null;default:1" json:"min_storage_gb"`
-	RecommendedStorageGB int      `gorm:"not null;default:5" json:"recommended_storage_gb"`
-	CreatedAt           time.Time `json:"created_at"`
+	ID                   uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
+	ServiceID            uuid.UUID `gorm:"type:uuid;uniqueIndex;not null" json:"service_id"`
+	MinRAMMB             int       `gorm:"column:min_ram_mb;not null;default:256" json:"min_ram_mb"`
+	RecommendedRAMMB     int       `gorm:"column:recommended_ram_mb;not null;default:512" json:"recommended_ram_mb"`
+	MinCPUCores          float32   `gorm:"not null;default:0.5" json:"min_cpu_cores"`
+	RecommendedCPUCores  float32   `gorm:"not null;default:1.0" json:"recommended_cpu_cores"`
+	MinStorageGB         int       `gorm:"not null;default:1" json:"min_storage_gb"`
+	RecommendedStorageGB int       `gorm:"not null;default:5" json:"recommended_storage_gb"`
+	CreatedAt            time.Time `json:"created_at"`
 }
 
 type UserSelection struct {
@@ -54,20 +55,20 @@ type UserSelection struct {
 }
 
 type HardwareRecommendation struct {
-	ID                uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
+	ID                uuid.UUID  `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
 	UserID            *uuid.UUID `gorm:"type:uuid" json:"user_id,omitempty"`
-	Tier              string    `gorm:"not null;default:'recommended'" json:"tier"`
-	TotalRAMMB        int       `gorm:"column:total_ram_mb;not null;default:0" json:"total_ram_mb"`
-	TotalCPUCores     float32   `gorm:"not null;default:0" json:"total_cpu_cores"`
-	TotalStorageGB    int       `gorm:"not null;default:0" json:"total_storage_gb"`
-	CPUSuggestion     string    `gorm:"default:''" json:"cpu_suggestion"`
-	RAMSuggestion     string    `gorm:"column:ram_suggestion;default:''" json:"ram_suggestion"`
-	StorageSuggestion string    `gorm:"default:''" json:"storage_suggestion"`
-	NetworkSuggestion string    `gorm:"default:''" json:"network_suggestion"`
-	Rationale         string    `gorm:"default:''" json:"rationale"`
-	EstimatedCostMin  int       `gorm:"default:0" json:"estimated_cost_min"`
-	EstimatedCostMax  int       `gorm:"default:0" json:"estimated_cost_max"`
-	CreatedAt         time.Time `json:"created_at"`
+	Tier              string     `gorm:"not null;default:'recommended'" json:"tier"`
+	TotalRAMMB        int        `gorm:"column:total_ram_mb;not null;default:0" json:"total_ram_mb"`
+	TotalCPUCores     float32    `gorm:"not null;default:0" json:"total_cpu_cores"`
+	TotalStorageGB    int        `gorm:"not null;default:0" json:"total_storage_gb"`
+	CPUSuggestion     string     `gorm:"default:''" json:"cpu_suggestion"`
+	RAMSuggestion     string     `gorm:"column:ram_suggestion;default:''" json:"ram_suggestion"`
+	StorageSuggestion string     `gorm:"default:''" json:"storage_suggestion"`
+	NetworkSuggestion string     `gorm:"default:''" json:"network_suggestion"`
+	Rationale         string     `gorm:"default:''" json:"rationale"`
+	EstimatedCostMin  int        `gorm:"default:0" json:"estimated_cost_min"`
+	EstimatedCostMax  int        `gorm:"default:0" json:"estimated_cost_max"`
+	CreatedAt         time.Time  `json:"created_at"`
 }
 
 type ShoppingList struct {
@@ -88,4 +89,12 @@ type ShoppingListItem struct {
 	Priority       string    `gorm:"default:'essential'" json:"priority"`
 	PurchaseLinks  string    `gorm:"type:jsonb;default:'[]'" json:"purchase_links"`
 	CreatedAt      time.Time `json:"created_at"`
+}
+
+type Event struct {
+	ID        uuid.UUID  `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
+	UserID    *uuid.UUID `gorm:"type:uuid" json:"user_id,omitempty"`
+	EventType string     `gorm:"not null" json:"event_type"`
+	Payload   string     `gorm:"type:jsonb;default:'{}'" json:"payload"`
+	CreatedAt time.Time  `json:"created_at"`
 }

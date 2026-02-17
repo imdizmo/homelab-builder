@@ -68,6 +68,8 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 		authHandler := handlers.NewAuthHandler(authService)
 		selectionService := services.NewSelectionService(db)
 		selectionHandler := handlers.NewSelectionHandler(selectionService)
+		adminHandler := handlers.NewAdminHandler(db, serviceService)
+		_ = services.NewAnalyticsService(db) // available for future handler integration
 
 		// Auth routes (public)
 		auth := router.Group("/auth")
@@ -96,6 +98,18 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 			protected.GET("/selections", selectionHandler.GetSelections)
 			protected.POST("/selections", selectionHandler.AddSelection)
 			protected.DELETE("/selections/:id", selectionHandler.RemoveSelection)
+		}
+
+		// Admin routes (require authentication + admin role)
+		admin := router.Group("/admin")
+		admin.Use(middleware.AuthMiddleware(authService))
+		admin.Use(middleware.AdminRequired())
+		{
+			admin.GET("/dashboard", adminHandler.Dashboard)
+			admin.GET("/users", adminHandler.ListUsers)
+			admin.GET("/services", adminHandler.ListAllServices)
+			admin.POST("/services/:id/toggle", adminHandler.ToggleServiceActive)
+			admin.GET("/events", adminHandler.RecentEvents)
 		}
 	}
 

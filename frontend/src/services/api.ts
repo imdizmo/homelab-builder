@@ -64,4 +64,11 @@ export const api = {
         request<{ message: string }>(`/api/selections/${selectionId}`, {
             method: 'DELETE',
         }),
+
+    // Admin
+    createService: (data: Record<string, unknown>) =>
+        request<{ data: import('../types').Service }>('/api/services', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        }),
 };
