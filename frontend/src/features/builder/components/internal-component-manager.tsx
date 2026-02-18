@@ -96,8 +96,8 @@ export function InternalComponentManager({ nodeId }: Props) {
             {/* Edit Dialog */}
             {editingComponent && (
                 <ComponentDetailsDialog
-                    isOpen={true}
-                    onClose={() => setEditingComponent(null)}
+                    open={true}
+                    onOpenChange={(v) => !v && setEditingComponent(null)}
                     initialType={editingComponent.type}
                     initialName={editingComponent.name}
                     initialDetails={editingComponent.details}

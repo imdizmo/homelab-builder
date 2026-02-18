@@ -6,40 +6,41 @@ import { Label } from "../../../components/ui/label"
 import type { HardwareType, HardwareSpec } from "../../../types"
 
 interface Props {
-    isOpen: boolean
-    onClose: () => void
+    open: boolean
+    onOpenChange: (open: boolean) => void
     onConfirm: (data: { name: string; details: HardwareSpec }) => void
     initialType: HardwareType
     initialName?: string
     initialDetails?: HardwareSpec
+    title?: string // Added optional title prop as it's used in VisualBuilder
 }
 
-export function ComponentDetailsDialog({ isOpen, onClose, onConfirm, initialType, initialName, initialDetails }: Props) {
+export function ComponentDetailsDialog({ open, onOpenChange, onConfirm, initialType, initialName, initialDetails, title }: Props) {
     const [name, setName] = useState(initialName || "")
     const [model, setModel] = useState(initialDetails?.model || "")
     const [spec, setSpec] = useState<HardwareSpec>(initialDetails || {})
 
     useEffect(() => {
-        if (isOpen) {
+        if (open) {
             setName(initialName || "")
             setModel(initialDetails?.model || "")
             setSpec(initialDetails || {})
         }
-    }, [isOpen, initialName, initialDetails])
+    }, [open, initialName, initialDetails])
 
     const handleConfirm = () => {
         onConfirm({
             name: name || `New ${initialType}`,
             details: { ...spec, model }
         })
-        onClose()
+        onOpenChange(false)
     }
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Add {initialType.toUpperCase()} Component</DialogTitle>
+                    <DialogTitle>{title || `Add ${initialType.toUpperCase()} Component`}</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     {/* Name */}
@@ -112,7 +113,7 @@ export function ComponentDetailsDialog({ isOpen, onClose, onConfirm, initialType
                     )}
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>Cancel</Button>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
                     <Button onClick={handleConfirm}>Add Component</Button>
                 </DialogFooter>
             </DialogContent>

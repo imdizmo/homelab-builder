@@ -213,6 +213,12 @@ interface BuilderState {
     exportLab: (name?: string) => void
     importLab: (json: string) => { ok: boolean; error?: string }
 
+    // API Persistence
+    currentBuildId: string | null
+    setCurrentBuildId: (id: string | null) => void
+    loadBuild: (id: string, data: any) => void // data is the JSON object
+    getBuildData: () => any // returns current state as JSON object
+
     // Computed getters
     totalCpu: () => number
     totalRam: () => number
@@ -688,6 +694,39 @@ export const useBuilderStore = create<BuilderState>()(
                     return { ok: false, error: 'Failed to parse JSON' }
                 }
             },
+
+            // ── API Persistence ────────────────────────────────────────────────
+            currentBuildId: null,
+            setCurrentBuildId: (id) => set({ currentBuildId: id }),
+
+            loadBuild: (id, data) => {
+                set({
+                    currentBuildId: id,
+                    selectedServices: data.selectedServices || [],
+                    hardwareNodes: data.hardwareNodes || [],
+                    nodes: data.nodes || [],
+                    edges: data.edges || [],
+                    boughtItems: data.boughtItems || [],
+                    showBought: data.showBought || false
+                });
+            },
+
+            getBuildData: () => {
+                const state = get();
+                return {
+                    selectedServices: state.selectedServices,
+                    hardwareNodes: state.hardwareNodes,
+                    nodes: state.nodes,
+                    edges: state.edges,
+                    boughtItems: state.boughtItems,
+                    showBought: state.showBought
+                };
+            },
+
+            // ── IP Management ──────────────────────────────────────────────────
+
+
+
 
             totalCpu: () => get().selectedServices.reduce((acc, s) => acc + (s.requirements?.min_cpu_cores || 0), 0),
             totalRam: () => get().selectedServices.reduce((acc, s) => acc + (s.requirements?.min_ram_mb || 0), 0),

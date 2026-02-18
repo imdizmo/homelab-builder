@@ -4,7 +4,7 @@ import { Button } from "../../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card"
 import { Cpu, HardDrive, MemoryStick, ShoppingCart, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react"
 import { useNavigate } from "react-router-dom"
-import { VisualBuilder } from "../components/visual-builder"
+import VisualBuilder from "../components/visual-builder"
 import { cn } from "../../../lib/utils"
 
 export default function RecommendationsPage() {

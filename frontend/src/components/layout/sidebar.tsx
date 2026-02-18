@@ -1,12 +1,11 @@
 import { NavLink } from "react-router-dom"
-import { LayoutDashboard, Server, ShoppingCart, CheckSquare, Settings, Hammer, HardDrive, FileCode } from "lucide-react"
+import { LayoutDashboard, ShoppingCart, CheckSquare, Settings, Hammer, HardDrive, FileCode } from "lucide-react"
 import { cn } from "../../lib/utils"
 import { api } from "../../lib/api"
 // import { Button } from "../ui/button" // Might be used for logout/collapse
 
 const NAV_ITEMS = [
-  { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Visual Builder", href: "/builder", icon: Server },
+  { label: "Projects", href: "/", icon: LayoutDashboard },
   { label: "Config Generator", href: "/generate", icon: FileCode },
   { label: "Service Catalog", href: "/services", icon: CheckSquare },
   { label: "Hardware Catalog", href: "/hardware", icon: HardDrive },

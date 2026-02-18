@@ -7,10 +7,11 @@ import AdminPage from './features/admin/pages/admin-page';
 import ShoppingListPage from './features/shopping/pages/shopping-list-page';
 import RecommendationsPage from './features/builder/pages/recommendations-page';
 import ChecklistPage from './features/setup-guide/pages/checklist-page';
-import HomePage from './features/landing/pages/home-page';
+
 import ServiceDetailPage from './features/catalog/pages/service-detail-page';
 import HardwareCatalogPage from './features/catalog/pages/hardware-catalog-page';
 import ConfigGeneratorPage from './features/builder/pages/config-generator-page';
+import ProjectsPage from './features/builder/pages/projects-page';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,10 +29,13 @@ function App() {
         <Router>
           <DashboardLayout>
             <Routes>
-              <Route path="/" element={<HomePage />} />
+              {/* New Structure */}
+              <Route path="/" element={<ProjectsPage />} />
+              <Route path="/builder/:id" element={<RecommendationsPage />} />
+
+              {/* Legacy / Auxiliary */}
               <Route path="/services" element={<ServicesPage />} />
               <Route path="/services/:id" element={<ServiceDetailPage />} />
-              <Route path="/builder" element={<RecommendationsPage />} />
               <Route path="/shopping-list" element={<ShoppingListPage />} />
               <Route path="/checklist" element={<ChecklistPage />} />
               <Route path="/hardware" element={<HardwareCatalogPage />} />

@@ -222,8 +222,8 @@ function HardwareCard({ item }: { item: HardwareComponent }) {
     const [likeCount, setLikeCount] = useState(item.likes)
     const meta = CATEGORY_META[item.category] ?? { label: item.category, icon: Package, color: "text-gray-500 bg-gray-500/10" }
     const Icon = meta.icon
-    const newOffers = item.buy_urls.filter(u => u.condition === "new")
-    const usedOffers = item.buy_urls.filter(u => u.condition === "used")
+    const newOffers = (item.buy_urls || []).filter(u => u.condition === "new")
+    const usedOffers = (item.buy_urls || []).filter(u => u.condition === "used")
 
     const handleLike = async () => {
         if (liked) return

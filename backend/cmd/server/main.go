@@ -124,6 +124,15 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 			protected.GET("/selections", selectionHandler.GetSelections)
 			protected.POST("/selections", selectionHandler.AddSelection)
 			protected.DELETE("/selections/:id", selectionHandler.RemoveSelection)
+
+			// Builds
+			buildService := services.NewBuildService(db)
+			buildHandler := handlers.NewBuildHandler(buildService)
+			protected.GET("/builds", buildHandler.List)
+			protected.POST("/builds", buildHandler.Create)
+			protected.GET("/builds/:id", buildHandler.Get)
+			protected.PUT("/builds/:id", buildHandler.Update)
+			protected.DELETE("/builds/:id", buildHandler.Delete)
 		}
 
 		// Admin routes (require authentication + admin role)

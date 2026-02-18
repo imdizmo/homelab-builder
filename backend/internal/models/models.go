@@ -131,3 +131,17 @@ type HardwareReview struct {
 }
 
 func (HardwareReview) TableName() string { return "hardware_reviews" }
+
+// Build represents a saved visual builder project
+type Build struct {
+	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
+	UserID    uuid.UUID `gorm:"type:uuid;not null;index" json:"user_id"` // Owner
+	Name      string    `gorm:"not null" json:"name"`
+	Data      string    `gorm:"type:jsonb;not null;default:'{}'" json:"data"` // React Flow + Builder Store JSON
+	Thumbnail string    `gorm:"default:''" json:"thumbnail"`                  // Base64 or URL
+	User      *User     `gorm:"foreignKey:UserID" json:"-"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+func (Build) TableName() string { return "builds" }

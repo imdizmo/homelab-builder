@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
     ReactFlow,
     Background,
@@ -15,14 +16,23 @@ import { HardwareNode as HardwareNodeComponent } from './hardware-node';
 import { NodePropertiesPanel } from './node-properties-panel';
 import { ComponentDetailsDialog } from './component-details-dialog';
 import { Button } from '../../../components/ui/button';
-import { Wand2 } from 'lucide-react';
+import { Wand2, Menu, Save, Folder, Download, LogOut } from 'lucide-react';
 import type { HardwareType, HardwareNode } from '../../../types';
+import { buildApi } from '../api/builds';
+import { useAuth } from '../../admin/hooks/use-auth';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "../../../components/ui/dropdown-menu";
 
 const nodeTypes: NodeTypes = {
     hardware: HardwareNodeComponent
 };
 
-// ─── Keyboard shortcut hint bar ───────────────────────────────────────────────
 function ShortcutHints() {
     return (
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur border text-[10px] text-muted-foreground shadow-sm pointer-events-none select-none">
@@ -36,7 +46,10 @@ function ShortcutHints() {
 }
 
 function Flow() {
+    const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
+    const { logout } = useAuth();
 
     const {
         nodes,
@@ -51,33 +64,65 @@ function Flow() {
         selectedNodeId,
         addInternalComponent,
         addVM,
-        reassignAllIPs
+        reassignAllIPs,
+        loadBuild,
+        getBuildData,
+        currentBuildId
     } = useBuilderStore();
 
     const { screenToFlowPosition, getIntersectingNodes } = useReactFlow();
 
-    // ── Keyboard shortcuts ──────────────────────────────────────────────────
+    useEffect(() => {
+        if (id && id !== currentBuildId) {
+            buildApi.get(id).then(build => {
+                const data = JSON.parse(build.data);
+                loadBuild(build.id, data);
+            }).catch(err => {
+                console.error("Failed to load build", err);
+                navigate('/');
+            });
+        }
+    }, [id, currentBuildId, loadBuild, navigate]);
+
+    const handleSave = async () => {
+        if (!id) return;
+        try {
+            const data = getBuildData();
+            await buildApi.update(id, {
+                name: "My Homelab",
+                data: JSON.stringify(data),
+                thumbnail: "" 
+            });
+             alert("Build saved successfully!");
+        } catch (err) {
+            console.error("Failed to save", err);
+            alert("Failed to save build.");
+        }
+    };
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Don't fire when typing in an input/textarea
             const tag = (e.target as HTMLElement).tagName
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
 
-            // Delete / Backspace — remove selected node
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                handleSave();
+                return;
+            }
+
             if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeId) {
                 e.preventDefault()
                 removeHardware(selectedNodeId)
                 return
             }
 
-            // Ctrl+D — duplicate selected node
             if (e.key === 'd' && (e.ctrlKey || e.metaKey) && selectedNodeId) {
                 e.preventDefault()
                 duplicateHardware(selectedNodeId)
                 return
             }
 
-            // Escape — deselect
             if (e.key === 'Escape') {
                 selectNode(null)
             }
@@ -85,18 +130,16 @@ function Flow() {
 
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [selectedNodeId, removeHardware, duplicateHardware, selectNode])
+    }, [selectedNodeId, removeHardware, duplicateHardware, selectNode, handleSave])
 
     const onDragOver = useCallback((event: React.DragEvent) => {
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
     }, []);
 
-    // ─── Component Drop Dialog State ──────────────────────────────────────────────
     const [pendingComponent, setPendingComponent] = useState<{ nodeId: string, type: HardwareType, name?: string, details?: any } | null>(null);
     const [pendingNode, setPendingNode] = useState<{ type: HardwareType, position: { x: number, y: number } } | null>(null);
 
-    // ─── Dialog Confirmation Handler ──────────────────────────────────────────────
     const handleComponentConfirm = (data: { name: string, details: any }) => {
         if (pendingComponent) {
             addInternalComponent(pendingComponent.nodeId, {
@@ -106,6 +149,19 @@ function Flow() {
                 details: data.details
             });
             setPendingComponent(null);
+        } else if (pendingNode) {
+            const newNode: HardwareNode = {
+                id: `node-${Date.now()}`,
+                type: pendingNode.type,
+                name: data.name,
+                x: pendingNode.position.x,
+                y: pendingNode.position.y,
+                details: data.details,
+                internal_components: [],
+                vms: []
+            };
+            addHardware(newNode);
+            setPendingNode(null);
         }
     };
 
@@ -118,7 +174,6 @@ function Flow() {
                 y: event.clientY,
             });
 
-            // Check if dropped onto an existing node
             const intersecting = getIntersectingNodes({
                 x: position.x,
                 y: position.y,
@@ -126,9 +181,8 @@ function Flow() {
                 height: 1,
             });
 
-            const targetNode = intersecting[0]; // Take the top-most node
+            const targetNode = intersecting[0];
 
-            // ── Parse drop data ─────────────────────────────────────────────
             let data: any = {};
             const dataStr = event.dataTransfer.getData('application/reactflow-data');
             const type = event.dataTransfer.getData('application/reactflow') as HardwareType;
@@ -137,20 +191,15 @@ function Flow() {
                     data = JSON.parse(dataStr);
                 } catch (e) { console.error("Failed to parse drop data", e); }
             } else if (type) {
-                // Simple drag
                 data = { type, name: `New ${type}` };
             }
 
             if (!data.type) return;
 
-            // ── Case 1: Dropped onto a Node (Install as component/VM) ───────
             if (targetNode && targetNode.type === 'hardware') {
                 const isServiceDrag = event.dataTransfer.getData('service-drag') === 'true';
 
-                // Scenario A: Service Drag -> Add as VM/Container
                 if (isServiceDrag) {
-                    // Parse CPU/RAM from details string (e.g. "0.5 cores", "2048MB")
-                    // Use parseFloat + ceil for CPU because "0.5" became 0 with parseInt
                     const cpuStr = data.details?.cpu
                     const ramStr = data.details?.ram
                     
@@ -160,15 +209,14 @@ function Flow() {
                     addVM(targetNode.id, {
                         id: `vm-${Date.now()}`,
                         name: data.name,
-                        type: 'container', // Default to container for services
+                        type: 'container',
                         status: 'running',
-                        cpu_cores: cpuVal || undefined, // undefined if 0 or NaN
+                        cpu_cores: cpuVal || undefined,
                         ram_mb: ramVal || undefined,
                     });
                     return;
                 }
 
-                // Scenario B: Hardware Drag -> Open Config Dialog
                 setPendingComponent({
                     nodeId: targetNode.id,
                     type: data.type,
@@ -178,12 +226,6 @@ function Flow() {
                 return;
             }
 
-            // ── Case 2: Dropped on Canvas (Create new Node) ─────────────────
-
-            // Prevent creating new nodes for "internal-only" types if we want?
-            // User said "disks does not have ip". External drive?
-            // Let's allow everything on canvas (external), but logic handles IPs.
-            // Trigger Wizard instead of immediate add
             setPendingNode({
                 type: data.type as HardwareType,
                 position
@@ -221,88 +263,80 @@ function Flow() {
                     }}
                     snapToGrid={true}
                     snapGrid={[20, 20]}
-                    // Disable React Flow's built-in delete so our handler takes over
                     deleteKeyCode={null}
                 >
                     <Background gap={20} size={1} />
                     <Controls />
                     
-                    {/* Visual Tools like IP Reassign */}
-                    <Panel position="top-right" className="flex gap-2">
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="text-xs bg-background/80 backdrop-blur"
-                            onClick={() => {
-                                reassignAllIPs();
-                            }}
-                            title="Re-calculate all IP addresses based on router gateway"
-                        >
-                            <Wand2 className="h-3 w-3 mr-1" /> Reassign IPs
-                        </Button>
-                    </Panel>
-                </ReactFlow>
+                    <Panel position="top-left" className="flex gap-2">
+                     <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="icon" className="h-10 w-10 bg-background/80 backdrop-blur">
+                                <Menu className="h-5 w-5" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-56">
+                            <DropdownMenuLabel>Project Menu</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={handleSave}>
+                                <Save className="mr-2 h-4 w-4" /> Save Project <span className="ml-auto text-xs text-muted-foreground opacity-60">Ctrl+S</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => navigate('/')}>
+                                <Folder className="mr-2 h-4 w-4" /> My Projects
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate('/generate')}>
+                                <Download className="mr-2 h-4 w-4" /> Export / Generate Config
+                            </DropdownMenuItem>
+                             <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => navigate('/services')}>
+                                <Wand2 className="mr-2 h-4 w-4" /> Component Catalog
+                            </DropdownMenuItem>
+                             <DropdownMenuSeparator />
+                             <DropdownMenuItem onClick={logout} className="text-red-500 focus:text-red-500">
+                                <LogOut className="mr-2 h-4 w-4" /> Sign Out
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
 
-                {/* Keyboard shortcut hint bar */}
+                    <Button variant="secondary" onClick={() => reassignAllIPs()} title="Fix IP Conflicts" size="sm" className="h-10 bg-background/80 backdrop-blur">
+                        <Wand2 className="mr-2 h-4 w-4" />
+                        Reassign IPs
+                    </Button>
+                </Panel>
+
+                <Panel position="top-right">
+                    {selectedNodeId && <NodePropertiesPanel />}
+                </Panel>
+
                 <ShortcutHints />
+                </ReactFlow>
+            </div>
 
-            {/* Dialog for Internal Components (Adding to Node) */}
             <ComponentDetailsDialog
-                isOpen={!!pendingComponent}
-                onClose={() => setPendingComponent(null)}
-                // ... props handled below
-                onConfirm={handleComponentConfirm}
-                initialType={pendingComponent?.type || 'server'}
+                open={!!pendingComponent}
+                onOpenChange={(v) => !v && setPendingComponent(null)}
+                initialType={pendingComponent?.type || 'disk'}
                 initialName={pendingComponent?.name}
                 initialDetails={pendingComponent?.details}
+                onConfirm={handleComponentConfirm}
             />
 
-            {/* Dialog for New Nodes (Wizard) */}
             <ComponentDetailsDialog
-                isOpen={!!pendingNode}
-                onClose={() => setPendingNode(null)}
-                onConfirm={(data) => {
-                    if (pendingNode) {
-                        const newNode: HardwareNode = {
-                            id: `node-${Date.now()}`,
-                            type: pendingNode.type,
-                            name: data.name,
-                            details: data.details,
-                            ip: '',
-                            x: pendingNode.position.x,
-                            y: pendingNode.position.y,
-                            internal_components: [],
-                            vms: []
-                        };
-                        addHardware(newNode);
-                    }
-                    setPendingNode(null);
-                }}
+                open={!!pendingNode}
+                onOpenChange={(v) => !v && setPendingNode(null)}
                 initialType={pendingNode?.type || 'server'}
-                initialName={pendingNode?.type ? `New ${pendingNode.type}` : ''}
+                title="New Node Details"
+                onConfirm={handleComponentConfirm}
             />
-
-            {/* Properties Panel Overlay */}
-            <NodePropertiesPanel />
-
-                {/* Component Config Dialog */}
-                <ComponentDetailsDialog
-                    isOpen={!!pendingComponent}
-                    onClose={() => setPendingComponent(null)}
-                    onConfirm={handleComponentConfirm}
-                    initialType={pendingComponent?.type || 'disk'}
-                    initialName={pendingComponent?.name}
-                    initialDetails={pendingComponent?.details}
-                />
-            </div>
         </div>
     );
 }
 
-export function VisualBuilder() {
+export default function VisualBuilderPage() {
     return (
         <ReactFlowProvider>
             <Flow />
         </ReactFlowProvider>
-    )
+    );
 }
