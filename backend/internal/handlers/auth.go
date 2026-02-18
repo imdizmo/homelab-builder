@@ -68,6 +68,24 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": result})
 }
 
+func (h *AuthHandler) DevLogin(c *gin.Context) {
+	var input struct {
+		Email string `json:"email" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Email is required"})
+		return
+	}
+
+	result, err := h.service.DevLogin(input.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Login failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": result})
+}
+
 func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 	userIDStr, exists := c.Get("user_id")
 	if !exists {

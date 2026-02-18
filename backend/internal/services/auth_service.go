@@ -47,17 +47,38 @@ type AuthResponse struct {
 }
 
 func (s *AuthService) GoogleLogin(input GoogleLoginInput) (*AuthResponse, error) {
+	// For MVP, we trust the input from frontend (in a real app, verify ID token!)
+	// If we wanted to verify: payload, err := idtoken.Validate(ctx, input.Credential, clientID)
+
+	return s.loginOrRegister(input.Email, input.Name, input.GoogleID, input.AvatarURL)
+}
+
+// DevLogin bypasses Google Auth for local development
+func (s *AuthService) DevLogin(email string) (*AuthResponse, error) {
+	if email == "" {
+		return nil, errors.New("email required")
+	}
+
+	// Mock a Google ID based on email
+	mockGoogleID := "dev-" + email
+	name := "Dev User (" + email + ")"
+	avatarURL := "https://api.dicebear.com/7.x/avataaars/svg?seed=" + email
+
+	return s.loginOrRegister(email, name, mockGoogleID, avatarURL)
+}
+
+func (s *AuthService) loginOrRegister(email, name, googleID, avatarURL string) (*AuthResponse, error) {
 	var user models.User
-	result := s.db.Where("google_id = ?", input.GoogleID).First(&user)
+	result := s.db.Where("google_id = ?", googleID).First(&user)
 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			// Create new user
 			user = models.User{
-				GoogleID:  input.GoogleID,
-				Email:     input.Email,
-				Name:      input.Name,
-				AvatarURL: input.AvatarURL,
+				GoogleID:  googleID,
+				Email:     email,
+				Name:      name,
+				AvatarURL: avatarURL,
 			}
 			if err := s.db.Create(&user).Error; err != nil {
 				return nil, fmt.Errorf("failed to create user: %w", err)
@@ -68,9 +89,9 @@ func (s *AuthService) GoogleLogin(input GoogleLoginInput) (*AuthResponse, error)
 	} else {
 		// Update existing user
 		updates := map[string]interface{}{
-			"email":      input.Email,
-			"name":       input.Name,
-			"avatar_url": input.AvatarURL,
+			"email":      email,
+			"name":       name,
+			"avatar_url": avatarURL,
 		}
 		s.db.Model(&user).Updates(updates)
 	}

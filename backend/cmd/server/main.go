@@ -14,15 +14,22 @@ import (
 )
 
 func main() {
+	log.Println("Starting Homelab Builder Backend (Built Version)...")
 	cfg := config.Load()
 
-	db, err := database.Connect(cfg.DatabaseDSN())
+	db, err := database.Connect(cfg)
 	if err != nil {
 		log.Printf("Warning: Failed to connect to database: %v", err)
 		log.Println("Starting server without database connection...")
 		router := setupRouter(nil)
 		startServer(router, cfg.ServerPort)
 		return
+	}
+
+	if db == nil {
+		log.Println("ERROR: DB is nil after Connect, but no error returned!")
+	} else {
+		log.Println("SUCCESS: DB is not nil. Proceeding to setupRouter.")
 	}
 
 	router := setupRouter(db)
@@ -64,6 +71,7 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 
 	// API routes (require database)
 	if db != nil {
+		log.Println("DEBUG: Registering API routes...")
 		authService := services.NewAuthService(db)
 		serviceService := services.NewServiceService(db)
 		serviceHandler := handlers.NewServiceHandler(serviceService)
@@ -82,6 +90,7 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 		{
 			// Apply rate limiting to login
 			auth.POST("/google", middleware.RateLimitMiddleware(rateLimiter), authHandler.GoogleLogin)
+			auth.POST("/dev", authHandler.DevLogin) // Backdoor for local development
 			auth.GET("/me", middleware.AuthMiddleware(authService), authHandler.GetCurrentUser)
 		}
 

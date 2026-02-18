@@ -35,6 +35,7 @@ services:
       DB_PASSWORD: homelab_password
       DB_NAME: homelab_builder
       DB_SSLMODE: disable
+      DB_TYPE: postgres
       JWT_SECRET: change-this-in-production
     depends_on:
       postgres:
@@ -45,6 +46,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3000
     container_name: homelab-builder-frontend
     ports:
       - "3000:80"

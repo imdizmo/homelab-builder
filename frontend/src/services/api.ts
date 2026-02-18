@@ -66,6 +66,18 @@ export const api = {
         }),
 
     // Admin
+    getAdminStats: () =>
+        request<{ data: { total_users: number; total_services: number; total_selections: number } }>('/admin/dashboard'),
+
+    getUsers: () =>
+        request<{ data: import('../types').User[] }>('/admin/users'),
+
+    toggleService: (id: string, active: boolean) =>
+        request<{ message: string }>(`/admin/services/${id}/toggle`, {
+            method: 'POST',
+            body: JSON.stringify({ active }),
+        }),
+
     createService: (data: Record<string, unknown>) =>
         request<{ data: import('../types').Service }>('/api/services', {
             method: 'POST',

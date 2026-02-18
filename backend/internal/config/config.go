@@ -13,6 +13,8 @@ type Config struct {
 	DBPassword string
 	DBName     string
 	DBSSLMode  string
+	DBType     string
+	DBFile     string
 }
 
 func Load() *Config {
@@ -24,6 +26,8 @@ func Load() *Config {
 		DBPassword: getEnv("DB_PASSWORD", "homelab_password"),
 		DBName:     getEnv("DB_NAME", "homelab_builder"),
 		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
+		DBType:     getEnv("DB_TYPE", "sqlite"), // Default to sqlite
+		DBFile:     getEnv("DB_FILE", "homelab.db"),
 	}
 }
 

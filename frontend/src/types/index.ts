@@ -9,6 +9,16 @@ export interface ServiceRequirement {
     recommended_storage_gb: number;
 }
 
+export type ServiceCategory =
+    | 'media'
+    | 'networking'
+    | 'monitoring'
+    | 'storage'
+    | 'management'
+    | 'home_automation'
+    | 'gaming'
+    | 'other';
+
 export interface Service {
     id: string;
     name: string;
@@ -76,6 +86,7 @@ export interface User {
     email: string;
     name: string;
     avatar_url: string;
+    is_admin?: boolean;
 }
 
 export interface UserSelection {
@@ -85,3 +96,26 @@ export interface UserSelection {
     service: Service;
     created_at: string;
 }
+
+export type HardwareType = 'router' | 'switch' | 'nas' | 'server' | 'pc' | 'access_point'
+
+export interface HardwareSpec {
+    model?: string
+    cpu?: string
+    ram?: string
+    storage?: string
+    price_est?: number
+    currency?: string
+    url?: string
+}
+
+export interface HardwareNode {
+    id: string
+    type: HardwareType
+    name: string
+    ip?: string
+    x: number
+    y: number
+    details?: HardwareSpec
+}
+
