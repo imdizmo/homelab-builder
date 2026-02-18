@@ -97,7 +97,9 @@ export interface UserSelection {
     created_at: string;
 }
 
-export type HardwareType = 'router' | 'switch' | 'nas' | 'server' | 'pc' | 'access_point'
+export type HardwareType =
+    | 'router' | 'switch' | 'nas' | 'server' | 'pc' | 'access_point'
+    | 'disk' | 'gpu' | 'hba' | 'pcie' | 'ups' | 'pdu' | 'sbc' | 'minipc'
 
 export interface HardwareSpec {
     model?: string
@@ -109,13 +111,37 @@ export interface HardwareSpec {
     url?: string
 }
 
+export type VMType = 'vm' | 'container' | 'lxc'
+
+export interface VirtualMachine {
+    id: string
+    name: string
+    type: VMType
+    ip?: string
+    os?: string        // e.g. "Ubuntu 22.04", "Alpine Linux"
+    cpu_cores?: number
+    ram_mb?: number
+    status: 'running' | 'stopped' | 'paused'
+}
+
+export interface HardwareComponent {
+    id: string
+    type: HardwareType
+    name: string
+    details?: HardwareSpec
+}
+
 export interface HardwareNode {
     id: string
     type: HardwareType
     name: string
     ip?: string
+    subnet_mask?: string
+    gateway?: string
     x: number
     y: number
     details?: HardwareSpec
+    vms?: VirtualMachine[]   // Nested VMs / Containers
+    internal_components?: HardwareComponent[] // Nested hardware (GPU, Disk, etc)
 }
 

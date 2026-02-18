@@ -83,6 +83,8 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 		selectionService := services.NewSelectionService(db)
 		selectionHandler := handlers.NewSelectionHandler(selectionService)
 		adminHandler := handlers.NewAdminHandler(db, serviceService)
+		hardwareService := services.NewHardwareService(db)
+		hardwareHandler := handlers.NewHardwareHandler(hardwareService)
 		_ = services.NewAnalyticsService(db) // available for future handler integration
 
 		// Auth routes (public)
@@ -105,6 +107,14 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 
 			api.POST("/recommendations", recommendationHandler.Generate)
 			api.POST("/shopping-list", shoppingHandler.Generate)
+
+			// Hardware catalog (public read)
+			api.GET("/hardware", hardwareHandler.GetAll)
+			api.GET("/hardware/categories", hardwareHandler.GetCategories)
+			api.GET("/hardware/brands", hardwareHandler.GetBrands)
+			api.GET("/hardware/:id", hardwareHandler.GetByID)
+			api.POST("/hardware/:id/like", hardwareHandler.Like)
+			api.POST("/hardware", hardwareHandler.Create) // community submission
 		}
 
 		// Protected API routes (require authentication)
@@ -127,6 +137,14 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 			admin.GET("/services", adminHandler.ListAllServices)
 			admin.POST("/services/:id/toggle", adminHandler.ToggleServiceActive)
 			admin.GET("/events", adminHandler.RecentEvents)
+
+			// Hardware admin
+			admin.GET("/hardware", hardwareHandler.AdminGetAll)
+			admin.POST("/hardware", hardwareHandler.AdminCreate)
+			admin.PUT("/hardware/:id", hardwareHandler.AdminUpdate)
+			admin.DELETE("/hardware/:id", hardwareHandler.AdminDelete)
+			admin.PATCH("/hardware/:id/approve", hardwareHandler.AdminApprove)
+			admin.POST("/hardware/bulk-import", hardwareHandler.AdminBulkImport)
 		}
 	}
 

@@ -98,3 +98,36 @@ type Event struct {
 	Payload   string     `gorm:"type:jsonb;default:'{}'" json:"payload"`
 	CreatedAt time.Time  `json:"created_at"`
 }
+
+type HardwareComponent struct {
+	ID          uuid.UUID  `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
+	Category    string     `gorm:"not null;index" json:"category"`
+	Brand       string     `gorm:"not null;index" json:"brand"`
+	Model       string     `gorm:"not null" json:"model"`
+	Spec        string     `gorm:"type:jsonb;not null;default:'{}'" json:"spec"`
+	PriceEst    float64    `gorm:"default:0" json:"price_est"`
+	Currency    string     `gorm:"default:'EUR'" json:"currency"`
+	BuyURLs     string     `gorm:"type:jsonb;default:'[]'" json:"buy_urls"`
+	ImageURL    string     `gorm:"default:''" json:"image_url"`
+	SubmittedBy *uuid.UUID `gorm:"type:uuid" json:"submitted_by,omitempty"`
+	Approved    bool       `gorm:"default:true;index" json:"approved"`
+	Likes       int        `gorm:"default:0" json:"likes"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+func (HardwareComponent) TableName() string { return "hardware_components" }
+
+type HardwareReview struct {
+	ID               uuid.UUID  `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
+	ComponentID      uuid.UUID  `gorm:"type:uuid;not null;index" json:"component_id"`
+	UserID           *uuid.UUID `gorm:"type:uuid" json:"user_id,omitempty"`
+	Rating           int        `gorm:"check:rating >= 1 AND rating <= 5" json:"rating"`
+	Body             string     `gorm:"default:''" json:"body"`
+	Pros             string     `gorm:"type:text[];default:'{}'" json:"pros"`
+	Cons             string     `gorm:"type:text[];default:'{}'" json:"cons"`
+	VerifiedPurchase bool       `gorm:"default:false" json:"verified_purchase"`
+	CreatedAt        time.Time  `json:"created_at"`
+}
+
+func (HardwareReview) TableName() string { return "hardware_reviews" }
