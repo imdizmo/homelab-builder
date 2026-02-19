@@ -47,11 +47,11 @@ function BuyConfirmDialog({ itemName, onBought, onClose }: { itemName: string; o
 }
 
 export default function ShoppingListPage() {
-  const { selectedServices, hardwareNodes, boughtItems, markAsBought, unmarkAsBought, showBought, setShowBought } = useBuilderStore()
+  const { hardwareNodes, boughtItems, markAsBought, unmarkAsBought, showBought, setShowBought } = useBuilderStore()
   const [locale, setLocale] = useState<ShoppingLocale>('en-US')
   const [pendingBuy, setPendingBuy] = useState<{ itemName: string; url: string } | null>(null)
 
-  const allItems = generateShoppingList(selectedServices, hardwareNodes, locale)
+  const allItems = generateShoppingList([], hardwareNodes, locale)
   const items = showBought ? allItems : allItems.filter(item => !boughtItems.includes(item.name))
   const boughtCount = allItems.filter(item => boughtItems.includes(item.name)).length
 
@@ -69,7 +69,7 @@ export default function ShoppingListPage() {
 
   const handlePrint = () => window.print()
 
-  if (selectedServices.length === 0 && hardwareNodes.length === 0) {
+  if (hardwareNodes.length === 0) {
       return (
           <div className="flex flex-col items-center justify-center p-12 text-center border rounded-lg bg-muted/20 min-h-[400px]">
             <ShoppingCart className="h-16 w-16 mb-6 text-muted-foreground/50" />

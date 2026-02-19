@@ -119,7 +119,7 @@ function ImportSection() {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function ConfigGeneratorPage() {
-    const { selectedServices, hardwareNodes, exportLab, loadBuild, clearCurrentBuild } = useBuilderStore()
+    const { hardwareNodes, exportLab, loadBuild, clearCurrentBuild } = useBuilderStore()
     const [activeTab, setActiveTab] = useState<Tab>('docker-compose')
     const [domain, setDomain] = useState('homelab.local')
     const [labName, setLabName] = useState('my-homelab')
@@ -195,42 +195,31 @@ export default function ConfigGeneratorPage() {
         homeReserve: 50,
     }), [])
 
-    // Derive comprehensive service list from both Shopping List (selectedServices) AND Visual Builder placements (hardwareNodes)
+    // Derive comprehensive service list from Visual Builder placements (hardwareNodes)
     const allServices = useMemo(() => {
-        const fromNodes = new Map<string, any>(); // Using any to avoid strict Service type construction for minimal mock
+        const services: any[] = []; // Using any to avoid strict Service type construction for minimal mock
 
         hardwareNodes.forEach(node => {
             node.vms?.forEach(vm => {
                 if (vm.type === 'container' || vm.type === 'vm') {
-                     if (!fromNodes.has(vm.name)) {
-                         fromNodes.set(vm.name, {
-                             id: vm.id, // Use VM ID
-                             name: vm.name,
-                             description: 'Deployed in Visual Builder',
-                             category: 'other',
-                             icon: 'Package',
-                             official_website: '',
-                             docker_support: true,
-                             is_active: true,
-                             requirements: null,
-                             created_at: new Date().toISOString()
-                         });
-                    }
+                     services.push({
+                         id: vm.id, // Use VM ID
+                         name: vm.name,
+                         description: 'Deployed in Visual Builder',
+                         category: 'other',
+                         icon: 'Package',
+                         official_website: '',
+                         docker_support: true,
+                         is_active: true,
+                         requirements: null,
+                         created_at: new Date().toISOString()
+                     });
                 }
             })
         });
 
-        // Start with selectedServices
-        const combined = [...selectedServices];
-        
-        // Add any from nodes that aren't already in list (deduplicate by Name)
-        fromNodes.forEach((svc, name) => {
-            if (!combined.find(s => s.name === name)) {
-                combined.push(svc);
-            }
-        });
-        return combined;
-    }, [selectedServices, hardwareNodes]);
+        return services;
+    }, [hardwareNodes]);
 
     const hasContent = allServices.length > 0 || hardwareNodes.length > 0
 
@@ -302,8 +291,8 @@ export default function ConfigGeneratorPage() {
                     <div className="flex flex-wrap gap-3">
                         <div className="flex items-center gap-2 rounded-lg border bg-card px-4 py-2 text-sm">
                             <Package className="h-4 w-4 text-primary" />
-                            <span className="font-medium">{selectedServices.length}</span>
-                            <span className="text-muted-foreground">services</span>
+                            <span className="font-medium">{allServices.length}</span>
+                            <span className="text-muted-foreground">containers/VMs</span>
                         </div>
                         <div className="flex items-center gap-2 rounded-lg border bg-card px-4 py-2 text-sm">
                             <Server className="h-4 w-4 text-primary" />

@@ -313,3 +313,119 @@ func buildJSONWithVM(nodeID, nodeType, nodeName, vmID, vmName string) string {
 	b, _ := json.Marshal(d)
 	return string(b)
 }
+
+// TestUpdate_PersistsUUIDs ensures that when a build is updated, the node IDs
+// from the JSON are respected (if valid UUIDs) or generated and returned consistently,
+// avoiding the "lost edges" problem where edges reference old IDs that no longer exist.
+func TestUpdate_PersistsUUIDs(t *testing.T) {
+	tx := testTx(t)
+	svc := NewBuildService(tx)
+	user := models.User{Email: uuid.NewString() + "@t.com", Name: "T", GoogleID: uuid.NewString()}
+	tx.Create(&user)
+
+	// Step 1: Create build with temporary/frontend-style IDs
+	initialData := `{
+		"hardwareNodes": [
+			{"id":"node-1","type":"router","name":"Router","x":0,"y":0,"ip":"","details":{},"vms":[]},
+			{"id":"node-2","type":"switch","name":"Switch","x":100,"y":0,"ip":"","details":{},"vms":[]}
+		],
+		"edges": [{"id":"edge-1","source":"node-1","target":"node-2"}],
+		"selectedServices": []
+	}`
+	build, err := svc.Create(user.ID, "Persistence Test", initialData, "")
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	// Verify that IDs in the DB are now UUIDs, not "node-1"
+	// and that the Build.Data blob has been updated with these UUIDs
+	loaded, err := svc.GetByID(build.ID)
+	if err != nil {
+		t.Fatalf("GetByID (initial): %v", err)
+	}
+
+	var data LegacyBuildData
+	json.Unmarshal([]byte(loaded.Data), &data)
+
+	idMap := make(map[string]string) // Original Name -> New UUID
+	for _, n := range data.HardwareNodes {
+		if _, err := uuid.Parse(n.ID); err != nil {
+			t.Errorf("Node %s has invalid UUID: %s", n.Name, n.ID)
+		}
+		idMap[n.Name] = n.ID
+	}
+
+	// If idMap is empty, something is wrong
+	if len(idMap) == 0 {
+		t.Fatal("Initial nodes have no UUIDs?")
+	}
+
+	routerID := idMap["Router"]
+	switchID := idMap["Switch"]
+
+	// Step 2: Update the build using the NEW UUIDs (simulating frontend saving state)
+	// We add a new node "node-3" but keep the existing nodes with their UUIDs
+	// Also simulate edge source/target using UUIDs
+	updatedData := `{"hardwareNodes":[
+		{"id":"` + routerID + `","type":"router","name":"Router","x":0,"y":0,"ip":"","details":{},"vms":[]},
+		{"id":"` + switchID + `","type":"switch","name":"Switch","x":100,"y":0,"ip":"","details":{},"vms":[]},
+		{"id":"node-3","type":"server","name":"New Server","x":200,"y":0,"ip":"","details":{},"vms":[]}
+	],"edges":[
+		{"id":"edge-1","source":"` + routerID + `","target":"` + switchID + `"},
+		{"id":"edge-2","source":"` + switchID + `","target":"node-3"}
+	],"selectedServices":[]}`
+
+	updatedBuild, err := svc.Update(build.ID, user.ID, "Persistence Test", updatedData, "")
+	if err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	// Step 3: Verify Persistence
+	// - Router and Switch should KEEP their IDs
+	// - New Server should get a UUID
+	// - Edges should be valid
+
+	var newData LegacyBuildData
+	json.Unmarshal([]byte(updatedBuild.Data), &newData)
+
+	newIDMap := make(map[string]string)
+	for _, n := range newData.HardwareNodes {
+		newIDMap[n.Name] = n.ID
+	}
+
+	if newIDMap["Router"] != routerID {
+		t.Errorf("Router ID changed! Want %s, got %s", routerID, newIDMap["Router"])
+	}
+	if newIDMap["Switch"] != switchID {
+		t.Errorf("Switch ID changed! Want %s, got %s", switchID, newIDMap["Switch"])
+	}
+	if _, err := uuid.Parse(newIDMap["New Server"]); err != nil {
+		t.Errorf("New Server ID is not a UUID: %s", newIDMap["New Server"])
+	}
+
+	// Verify Relations in DB
+	finalLoaded, _ := svc.GetByID(build.ID)
+	// Note: Our test helper GetByID preloads relations.
+	if len(finalLoaded.Nodes) != 3 {
+		t.Errorf("Expected 3 nodes in DB, got %d", len(finalLoaded.Nodes))
+	}
+	if len(finalLoaded.Edges) != 2 {
+		t.Errorf("Expected 2 edges in DB, got %d", len(finalLoaded.Edges))
+	}
+}
+
+func TestUpdate_WithVMFails(t *testing.T) {
+	tx := testTx(t)
+	svc := NewBuildService(tx)
+	user := models.User{Email: uuid.NewString() + "@t.com", Name: "T", GoogleID: uuid.NewString()}
+	tx.Create(&user)
+
+	initialData := `{"hardwareNodes":[{"id":"node-1","type":"server","name":"Server","x":0,"y":0,"ip":"","details":{},"vms":[]}],"edges":[],"nodes":[],"selectedServices":[]}`
+	build, _ := svc.Create(user.ID, "Test", initialData, "")
+
+	updatedData := `{"hardwareNodes":[{"id":"node-1","type":"server","name":"Server","x":0,"y":0,"ip":"","details":{},"vms":[{"id":"vm-123","name":"My Container","type":"container","status":"running","cpu_cores":null,"ram_mb":null}]}],"edges":[],"nodes":[],"selectedServices":[]}`
+	_, err := svc.Update(build.ID, user.ID, "Test", updatedData, "")
+	if err != nil {
+		t.Fatalf("Update with VM failed: %v", err)
+	}
+}

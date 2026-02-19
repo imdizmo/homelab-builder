@@ -8,16 +8,16 @@ import VisualBuilder from "../components/visual-builder"
 import { cn } from "../../../lib/utils"
 
 export default function RecommendationsPage() {
-  const { selectedServices, totalCpu, totalRam, totalStorage } = useBuilderStore()
+  const { hardwareNodes, totalCpu, totalRam, totalStorage } = useBuilderStore()
   const navigate = useNavigate()
   const [showInsights, setShowInsights] = useState(false)
 
-  if (selectedServices.length === 0) {
+  if (hardwareNodes.length === 0) {
     return (
         <div className="flex flex-col items-center justify-center p-12 text-center h-[calc(100vh-4rem)]">
-            <h2 className="text-2xl font-bold mb-4">No Services Selected</h2>
-            <p className="text-muted-foreground mb-8">Please select some services first to see recommendations.</p>
-            <Button onClick={() => navigate('/services')}>Go to Catalog</Button>
+            <h2 className="text-2xl font-bold mb-4">No Hardware Configured</h2>
+            <p className="text-muted-foreground mb-8">Please add some hardware in the Visual Builder first.</p>
+            <Button onClick={() => navigate('/builder')}>Go to Builder</Button>
         </div>
     )
   }
@@ -45,7 +45,7 @@ export default function RecommendationsPage() {
                 <h1 className="text-lg font-bold tracking-tight flex items-center gap-2">
                     System Topology
                     <span className="text-muted-foreground font-normal text-sm">
-                        ({selectedServices.length} services)
+                        ({hardwareNodes.length} nodes)
                     </span>
                 </h1>
             </div>

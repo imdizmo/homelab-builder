@@ -13,31 +13,20 @@ import {
 } from '@xyflow/react'
 import type { Service, HardwareNode, VirtualMachine, HardwareType, HardwareComponent } from '../../../types'
 import { buildApi } from '../api/builds'
+import { api } from '../../../services/api'
 
 // ─── IP Logic moved to Backend (Phase 2) ────────────────────────────────────
 // Local constants removed to prevent "Split Brain" logic.
 // See internal/services/ip_service.go for the Source of Truth.
 
-
 // Types that never get an IP address
 export const NON_NETWORK_TYPES: HardwareType[] = ['disk', 'gpu', 'hba', 'pcie', 'pdu', 'ups']
 
-
-// Helper functions removed.
-// subnetPrefix, collectUsedOffsets, collectUsedIPs, assignIP, assignVMIP -> GONE.
-// findGateway kept for UI check? No, backend handles it.
-// Actually, `findGateway` is used in `autoAssignIP`? Yes.
-// But we are removing `autoAssignIP` too.
-
-
 interface BuilderState {
     // Data Logic
-    selectedServices: Service[]
+    availableServices: Service[]
+    fetchServices: () => Promise<void>
     hardwareNodes: HardwareNode[]
-
-    addService: (service: Service) => void
-    removeService: (serviceId: string) => void
-    toggleService: (service: Service) => void
 
     // Visual Logic (React Flow Source of Truth)
     nodes: Node[]
@@ -100,6 +89,7 @@ interface BuilderState {
     totalStorage: () => number
 }
 
+
 export const useBuilderStore = create<BuilderState>()(
     persist(
         (set, get) => ({
@@ -110,6 +100,15 @@ export const useBuilderStore = create<BuilderState>()(
             selectedNodeId: null,
             boughtItems: [],
             showBought: false,
+            availableServices: [],
+            fetchServices: async () => {
+                try {
+                    const res = await api.getServices()
+                    set({ availableServices: res.data || [] })
+                } catch (e) {
+                    console.error("Failed to fetch services", e)
+                }
+            },
             projectName: "My Homelab",
             projectThumbnail: "",
             currentBuildId: null,
@@ -129,35 +128,7 @@ export const useBuilderStore = create<BuilderState>()(
                 setTimeout(() => get().reassignAllIPs(), 0)
             },
 
-            addService: (service) => {
-                set((state) => {
-                    const newNode: Node = {
-                        id: service.id,
-                        type: 'service',
-                        data: { label: service.name },
-                        position: { x: Math.random() * 400, y: Math.random() * 400 + 300 },
-                    };
-                    return {
-                        selectedServices: [...state.selectedServices, service],
-                        nodes: [...state.nodes, newNode]
-                    };
-                });
-            },
 
-            removeService: (serviceId) => {
-                set((state) => ({
-                    selectedServices: state.selectedServices.filter((s) => s.id !== serviceId),
-                    nodes: state.nodes.filter((n) => n.id !== serviceId),
-                    edges: state.edges.filter((e) => e.source !== serviceId && e.target !== serviceId)
-                }));
-            },
-
-            toggleService: (service) => {
-                const { selectedServices } = get()
-                const exists = selectedServices.find((s) => s.id === service.id)
-                if (exists) get().removeService(service.id)
-                else get().addService(service)
-            },
 
             selectNode: (nodeId) => set({ selectedNodeId: nodeId }),
 
@@ -321,7 +292,9 @@ export const useBuilderStore = create<BuilderState>()(
                         )
                     }
                 });
-                // IPs are assigned on connection, not on VM add
+
+                // Automatically assign IP when VM is added
+                setTimeout(() => get().reassignAllIPs(), 0);
             },
 
             removeVM: (nodeId, vmId) => {
@@ -339,7 +312,10 @@ export const useBuilderStore = create<BuilderState>()(
                                 : n
                         )
                     }
-                })
+                });
+
+                // Automatically recalculate IPs when VM is removed
+                setTimeout(() => get().reassignAllIPs(), 0);
             },
 
             updateVM: (nodeId, vmId, updates) => {
@@ -398,39 +374,38 @@ export const useBuilderStore = create<BuilderState>()(
                     const build = await buildApi.get(currentBuildId)
                     const savedData = JSON.parse(build.data || '{}')
 
-                    // Build a lookup: "name|type" → { nodeIp, vmIps }
+                    // Build a lookup: "id" → { nodeIp, vmIps }
                     type VmIpMap = Map<string, string>
                     interface NodeIpEntry { nodeIp: string; vmMap: VmIpMap }
-                    const ipByNameType = new Map<string, NodeIpEntry>()
-                    ;((build as any).nodes ?? []).forEach((n: any) => {
-                        if (!n.ip) return
-                        const vmMap: VmIpMap = new Map()
-                        ;(n.virtual_machines ?? []).forEach((vm: any) => {
-                            if (vm.ip) vmMap.set(vm.name + '|' + vm.type, vm.ip)
+                    const ipById = new Map<string, NodeIpEntry>()
+                        ; ((build as any).nodes ?? []).forEach((n: any) => {
+                            if (!n.ip) return
+                            const vmMap: VmIpMap = new Map()
+                                ; (n.virtual_machines ?? []).forEach((vm: any) => {
+                                    if (vm.ip) vmMap.set(vm.id, vm.ip)
+                                })
+                            ipById.set(n.id, { nodeIp: n.ip, vmMap })
                         })
-                        ipByNameType.set(n.name + '|' + n.type, { nodeIp: n.ip, vmMap })
-                    })
 
                     // Overlay IPs onto the saved blob's hardwareNodes
                     const hardwareNodesWithIPs = (savedData.hardwareNodes ?? []).map((hn: any) => {
-                        const entry = ipByNameType.get(hn.name + '|' + hn.type)
+                        const entry = ipById.get(hn.id)
                         if (!entry) return hn
                         const vmsWithIPs = (hn.vms ?? []).map((vm: any) => {
-                            const vmIp = entry.vmMap.get(vm.name + '|' + vm.type)
+                            const vmIp = entry.vmMap.get(vm.id)
                             return vmIp ? { ...vm, ip: vmIp } : vm
                         })
                         return { ...hn, ip: entry.nodeIp, vms: vmsWithIPs }
                     })
 
-                    // Also patch the ReactFlow nodes array — the hardware card reads
                     // its IP from node.data.ip, not from hardwareNodes directly.
-                    const ipByNodeId = new Map<string, string>(
-                        hardwareNodesWithIPs.map((hn: any) => [hn.id, hn.ip])
+                    const nodeMap = new Map<string, any>(
+                        hardwareNodesWithIPs.map((hn: any) => [hn.id, hn])
                     )
                     const reactFlowNodesWithIPs = (savedData.nodes ?? []).map((rfn: any) => {
-                        const newIp = ipByNodeId.get(rfn.id)
-                        return newIp
-                            ? { ...rfn, data: { ...rfn.data, ip: newIp } }
+                        const hn = nodeMap.get(rfn.id)
+                        return hn
+                            ? { ...rfn, data: { ...rfn.data, ip: hn.ip, vms: hn.vms } }
                             : rfn
                     })
 
@@ -454,16 +429,15 @@ export const useBuilderStore = create<BuilderState>()(
 
             setShowBought: (v) => set({ showBought: v }),
 
-            clear: () => set({ selectedServices: [], hardwareNodes: [], nodes: [], edges: [], boughtItems: [] }),
+            clear: () => set({ hardwareNodes: [], nodes: [], edges: [], boughtItems: [] }),
 
             // ── Export / Import ────────────────────────────────────────────────
             exportLab: (name = 'my-homelab') => {
-                const { selectedServices, hardwareNodes, nodes, edges } = get()
+                const { hardwareNodes, nodes, edges } = get()
                 const payload = {
                     version: 1,
                     name,
                     exportedAt: new Date().toISOString(),
-                    selectedServices,
                     hardwareNodes,
                     nodes,
                     edges,
@@ -480,11 +454,10 @@ export const useBuilderStore = create<BuilderState>()(
             importLab: (json: string) => {
                 try {
                     const payload = JSON.parse(json)
-                    if (!payload.version || !Array.isArray(payload.selectedServices)) {
+                    if (!payload.version) {
                         return { ok: false, error: 'Invalid .homelab.json format' }
                     }
                     set({
-                        selectedServices: payload.selectedServices ?? [],
                         hardwareNodes: payload.hardwareNodes ?? [],
                         nodes: payload.nodes ?? [],
                         edges: payload.edges ?? [],
@@ -503,7 +476,6 @@ export const useBuilderStore = create<BuilderState>()(
                 nodes: [],
                 edges: [],
                 hardwareNodes: [],
-                selectedServices: []
             }),
             setProjectName: (name) => set({ projectName: name }),
 
@@ -511,7 +483,6 @@ export const useBuilderStore = create<BuilderState>()(
                 set({
                     currentBuildId: id,
                     projectName: name,
-                    selectedServices: data.selectedServices || [],
                     hardwareNodes: data.hardwareNodes || [],
                     nodes: data.nodes || [],
                     edges: data.edges || [],
@@ -524,7 +495,6 @@ export const useBuilderStore = create<BuilderState>()(
                 // Return a JSON-serializable snapshot
                 const state = get();
                 return {
-                    selectedServices: state.selectedServices,
                     hardwareNodes: state.hardwareNodes,
                     nodes: state.nodes,
                     edges: state.edges,
@@ -533,14 +503,19 @@ export const useBuilderStore = create<BuilderState>()(
                 };
             },
 
-            totalCpu: () => get().selectedServices.reduce((acc, s) => acc + (s.requirements?.min_cpu_cores || 0), 0),
-            totalRam: () => get().selectedServices.reduce((acc, s) => acc + (s.requirements?.min_ram_mb || 0), 0),
-            totalStorage: () => get().selectedServices.reduce((acc, s) => acc + (s.requirements?.min_storage_gb || 0), 0),
+            totalCpu: () => {
+                const { hardwareNodes } = get();
+                return hardwareNodes.reduce((acc, node) => acc + (node.vms?.reduce((vAcc, vm) => vAcc + (vm.cpu_cores || 0), 0) || 0), 0);
+            },
+            totalRam: () => {
+                const { hardwareNodes } = get();
+                return hardwareNodes.reduce((acc, node) => acc + (node.vms?.reduce((vAcc, vm) => vAcc + (vm.ram_mb || 0), 0) || 0), 0);
+            },
+            totalStorage: () => 0,
         }),
         {
             name: 'homelab-builder-storage',
             partialize: (state) => ({
-                selectedServices: state.selectedServices,
                 hardwareNodes: state.hardwareNodes,
                 nodes: state.nodes,
                 edges: state.edges,

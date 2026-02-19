@@ -76,7 +76,6 @@ function Flow() {
         getBuildData,
         currentBuildId,
         hardwareNodes,  // Added for auto-save dependency
-        selectedServices, // Added for auto-save dependency
         projectName
     } = useBuilderStore();
 
@@ -176,7 +175,7 @@ function Flow() {
         }, 2000); // 2 seconds debounce
 
         return () => clearTimeout(timer);
-    }, [nodes, edges, hardwareNodes, selectedServices, saveProject]); // Any change triggers debounce
+    }, [nodes, edges, hardwareNodes, saveProject]); // Any change triggers debounce
 
     // Manual save wrapper (immediate)
     const handleManualSave = () => {
@@ -283,6 +282,27 @@ function Flow() {
 
             if (!data.type) return;
 
+            const isServiceDrag = event.dataTransfer.getData('service-drag') === 'true';
+
+            if (isServiceDrag) {
+                if (targetNode && targetNode.type === 'hardware') {
+                    const cpuVal = data.details?.cpu ? Number(data.details.cpu) : undefined
+                    const ramVal = data.details?.ram ? Number(data.details.ram) : undefined
+
+                    addVM(targetNode.id, {
+                        id: `vm-${Date.now()}`,
+                        name: data.name,
+                        type: 'container',
+                        status: 'running',
+                        cpu_cores: cpuVal || undefined,
+                        ram_mb: ramVal || undefined,
+                    });
+                } else {
+                    toast.error("Please drag services directly onto a Server or PC node.");
+                }
+                return;
+            }
+
             // Direct add if it's a preset (has details) OR if it's a known preset structure
             // We check for details.model to assume it's a preset
             if (data.details && Object.keys(data.details).length > 0 && !pendingComponent) {
@@ -301,26 +321,6 @@ function Flow() {
             }
 
             if (targetNode && targetNode.type === 'hardware') {
-                const isServiceDrag = event.dataTransfer.getData('service-drag') === 'true';
-
-                if (isServiceDrag) {
-                    const cpuStr = data.details?.cpu
-                    const ramStr = data.details?.ram
-                    
-                    const cpuVal = cpuStr ? Math.ceil(parseFloat(cpuStr)) : undefined
-                    const ramVal = ramStr ? parseInt(ramStr, 10) : undefined
-
-                    addVM(targetNode.id, {
-                        id: `vm-${Date.now()}`,
-                        name: data.name,
-                        type: 'container',
-                        status: 'running',
-                        cpu_cores: cpuVal || undefined,
-                        ram_mb: ramVal || undefined,
-                    });
-                    return;
-                }
-
                 setPendingComponent({
                     nodeId: targetNode.id,
                     type: data.type,

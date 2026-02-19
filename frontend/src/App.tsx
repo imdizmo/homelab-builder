@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from './components/theme-provider';
 // import MainLayout from './components/layout/main-layout'; // API: Removed unused layout
-import ServicesPage from './features/catalog/pages/services-page';
+
 import VisualBuilderPage from './features/builder/components/visual-builder';
 import ProjectsPage from './features/builder/pages/projects-page';
 import AdminPage from './features/admin/pages/admin-page';
@@ -40,7 +40,7 @@ function AppContent() {
             <Routes>
             <Route path="/" element={user ? <ProjectsPage /> : <LoginPage />} />
             <Route path="/builder/:id" element={<VisualBuilderPage />} />
-            <Route path="/services" element={<ServicesPage />} />
+
             <Route path="/shopping-list" element={<ShoppingListPage />} />
             <Route path="/generate" element={<ConfigGeneratorPage />} />
             <Route path="/admin" element={<AdminPage />} />

@@ -178,7 +178,12 @@ const PRESETS: {
 
 // ─── Toolbox component ─────────────────────────────────────────────────────────
 export function HardwareToolbox() {
-    const { selectedServices } = useBuilderStore()
+    const { availableServices, fetchServices } = useBuilderStore()
+    
+    React.useEffect(() => {
+        fetchServices()
+    }, [fetchServices])
+
     const [activeTab, setActiveTab] = useState<'components' | 'presets' | 'services'>('components')
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['Single Board Computers', 'Mini PCs']))
     const [isMinimized, setIsMinimized] = useState(false)
@@ -288,9 +293,9 @@ export function HardwareToolbox() {
                                 >
                                     <Icon className="h-3.5 w-3.5" />
                                     {tab.label}
-                                    {tab.id === 'services' && selectedServices.length > 0 && (
+                                    {tab.id === 'services' && availableServices.length > 0 && (
                                         <span className="absolute top-1 right-1 bg-primary text-primary-foreground text-[8px] rounded-full w-3.5 h-3.5 flex items-center justify-center">
-                                            {selectedServices.length}
+                                            {availableServices.length}
                                         </span>
                                     )}
                                 </button>
@@ -366,55 +371,50 @@ export function HardwareToolbox() {
                         {/* ── Services tab ── */}
                         {activeTab === 'services' && (
                             <div className="space-y-2">
-                                {selectedServices.length === 0 ? (
-                                    <div className="text-center py-6 space-y-2">
-                                        <AppWindow className="h-8 w-8 text-muted-foreground/30 mx-auto" />
-                                        <p className="text-xs text-muted-foreground">No services selected yet.</p>
-                                        <p className="text-[10px] text-muted-foreground/70">Go to the Services page and add services to your lab first.</p>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <p className="text-[10px] text-muted-foreground">Drag a service onto a server/PC node to assign it</p>
-                                        <div className="space-y-1">
-                                            {selectedServices.map(svc => (
-                                                <div
-                                                    key={svc.id}
-                                                    className="flex items-center gap-2 px-2.5 py-2 border rounded-lg cursor-grab hover:bg-primary/5 hover:border-primary/50 transition-colors bg-card active:cursor-grabbing"
-                                                    onDragStart={e => {
-                                                        e.dataTransfer.setData('application/reactflow', 'server')
-                                                        e.dataTransfer.setData('service-drag', 'true') // Helper to identify service drag
-                                                        e.dataTransfer.setData('application/reactflow-data', JSON.stringify({
-                                                            type: 'server',
-                                                            name: svc.name,
-                                                            details: {
-                                                                model: svc.name,
-                                                                cpu: svc.requirements ? `${svc.requirements.min_cpu_cores} cores` : undefined,
-                                                                ram: svc.requirements ? `${svc.requirements.min_ram_mb}MB` : undefined,
-                                                            },
-                                                            serviceId: svc.id // Pass service ID
-                                                        }))
-                                                        e.dataTransfer.effectAllowed = 'move'
-                                                    }}
-                                                    draggable
-                                                >
-                                                    <div className="h-6 w-6 rounded bg-primary/10 flex items-center justify-center shrink-0">
-                                                        <Zap className="h-3 w-3 text-primary" />
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="text-[10px] font-semibold truncate">{svc.name}</p>
-                                                        {svc.requirements && (
-                                                            <p className="text-[9px] text-muted-foreground">
-                                                                {svc.requirements.min_cpu_cores}vCPU · {svc.requirements.min_ram_mb >= 1024
-                                                                    ? `${svc.requirements.min_ram_mb / 1024}GB`
-                                                                    : `${svc.requirements.min_ram_mb}MB`} RAM
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
+                                <p className="text-[10px] text-muted-foreground">Drag a service onto a server/PC node to assign it</p>
+                                <div className="space-y-1">
+                                    {availableServices.length === 0 && (
+                                         <div className="text-center py-6 space-y-2">
+                                            <p className="text-xs text-muted-foreground">Loading or no services found...</p>
                                         </div>
-                                    </>
-                                )}
+                                    )}
+                                    {availableServices.map(svc => (
+                                        <div
+                                            key={svc.id}
+                                            className="flex items-center gap-2 px-2.5 py-2 border rounded-lg cursor-grab hover:bg-primary/5 hover:border-primary/50 transition-colors bg-card active:cursor-grabbing"
+                                            onDragStart={e => {
+                                                e.dataTransfer.setData('application/reactflow', 'server')
+                                                e.dataTransfer.setData('service-drag', 'true') // Helper to identify service drag
+                                                e.dataTransfer.setData('application/reactflow-data', JSON.stringify({
+                                                    type: 'server',
+                                                    name: svc.name,
+                                                    details: {
+                                                        model: svc.name,
+                                                        cpu: svc.requirements ? svc.requirements.min_cpu_cores : undefined,
+                                                        ram: svc.requirements ? svc.requirements.min_ram_mb : undefined,
+                                                    },
+                                                    serviceId: svc.id // Pass service ID
+                                                }))
+                                                e.dataTransfer.effectAllowed = 'move'
+                                            }}
+                                            draggable
+                                        >
+                                            <div className="h-6 w-6 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                                                <Zap className="h-3 w-3 text-primary" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-semibold truncate">{svc.name}</p>
+                                                {svc.requirements && (
+                                                    <p className="text-[9px] text-muted-foreground">
+                                                        {svc.requirements.min_cpu_cores}vCPU · {svc.requirements.min_ram_mb >= 1024
+                                                            ? `${(svc.requirements.min_ram_mb / 1024).toFixed(1)}GB`
+                                                            : `${svc.requirements.min_ram_mb}MB`} RAM
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>

@@ -7,7 +7,7 @@ import { cn } from "../../lib/utils"
 const NAV_ITEMS = [
   { label: "Projects", href: "/", icon: LayoutDashboard },
   { label: "Config Generator", href: "/generate", icon: FileCode },
-  { label: "Service Catalog", href: "/services", icon: CheckSquare },
+
   { label: "Hardware Catalog", href: "/hardware", icon: HardDrive },
   { label: "Shopping List", href: "/shopping-list", icon: ShoppingCart },
   { label: "Setup Guide", href: "/checklist", icon: CheckSquare },

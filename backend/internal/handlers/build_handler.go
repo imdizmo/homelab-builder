@@ -105,6 +105,7 @@ func (h *BuildHandler) Update(c *gin.Context) {
 
 	build, err := h.service.Update(id, userID.(uuid.UUID), req.Name, req.Data, req.Thumbnail)
 	if err != nil {
+		fmt.Printf("\n--- BUILD UPDATE ERROR ---\nError: %v\nData: %s\n--------------------------\n", err, req.Data)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update build"})
 		return
 	}

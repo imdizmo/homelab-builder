@@ -26,7 +26,7 @@ vi.mock('../api/builds', () => ({
         get: vi.fn().mockResolvedValue({
             id: 'build-1',
             name: 'test',
-            data: JSON.stringify({ hardwareNodes: [], nodes: [], edges: [], selectedServices: [] }),
+            data: JSON.stringify({ hardwareNodes: [], nodes: [], edges: [] }),
             nodes: [],
         }),
         create: vi.fn().mockResolvedValue({ id: 'build-1' }),
@@ -48,7 +48,6 @@ function resetStoreWithBuildId(id = 'build-1') {
         hardwareNodes: [],
         nodes: [],
         edges: [],
-        selectedServices: [],
         projectName: 'Test Project',
     })
     vi.clearAllMocks()
@@ -77,13 +76,13 @@ describe('reassignAllIPs', () => {
     it('should save (update) BEFORE calling calculateNetwork — core regression', async () => {
         // Track call order
         const callOrder: string[] = []
-        ;(buildApi.update as ReturnType<typeof vi.fn>).mockImplementation(async () => {
-            callOrder.push('update')
-            return { id: 'build-1', name: 'test', data: '{}' }
-        })
-        ;(buildApi.calculateNetwork as ReturnType<typeof vi.fn>).mockImplementation(async () => {
-            callOrder.push('calculateNetwork')
-        })
+            ; (buildApi.update as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+                callOrder.push('update')
+                return { id: 'build-1', name: 'test', data: '{}' }
+            })
+            ; (buildApi.calculateNetwork as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+                callOrder.push('calculateNetwork')
+            })
 
         await useBuilderStore.getState().reassignAllIPs()
 
@@ -125,18 +124,17 @@ describe('reassignAllIPs', () => {
         const router = makeRouter('router-1')
         useBuilderStore.setState({ hardwareNodes: [router] })
 
-        // Mock: backend returns router with IP assigned
-        ;(buildApi.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-            id: 'build-1',
-            name: 'test',
-            data: JSON.stringify({
-                hardwareNodes: [{ ...router, ip: '' }],
-                nodes: [{ id: 'router-1', type: 'router', data: { ip: '', label: 'Router' } }],
-                edges: [],
-                selectedServices: [],
-            }),
-            nodes: [{ id: undefined, name: 'Router', type: 'router', ip: '192.168.1.1', virtual_machines: [] }],
-        })
+            // Mock: backend returns router with IP assigned
+            ; (buildApi.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+                id: 'build-1',
+                name: 'test',
+                data: JSON.stringify({
+                    hardwareNodes: [{ ...router, ip: '' }],
+                    nodes: [{ id: 'router-1', type: 'router', data: { ip: '', label: 'Router' } }],
+                    edges: [],
+                }),
+                nodes: [{ id: 'router-1', name: 'Router', type: 'router', ip: '192.168.1.1', virtual_machines: [] }],
+            })
 
         await useBuilderStore.getState().reassignAllIPs()
 

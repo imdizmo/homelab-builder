@@ -18,10 +18,10 @@ function SimpleProgress({ value, max = 100, className }: { value: number, max?: 
 }
 
 export function BuilderPanel() {
-  const { selectedServices, totalCpu, totalRam, totalStorage } = useBuilderStore()
+  const { hardwareNodes, totalCpu, totalRam, totalStorage } = useBuilderStore()
   const navigate = useNavigate()
   
-  if (selectedServices.length === 0) return null
+  if (hardwareNodes.length === 0) return null
 
   const cpu = totalCpu()
   const ram = totalRam()
@@ -31,6 +31,8 @@ export function BuilderPanel() {
   const maxCpu = 16
   const maxRam = 64 * 1024
   const maxStorage = 4000
+
+  const totalVMs = hardwareNodes.reduce((acc, node) => acc + (node.vms?.length || 0), 0)
 
   return (
     <div className="fixed bottom-0 left-0 md:left-64 right-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 shadow-lg z-40 animate-in slide-in-from-bottom">
@@ -62,7 +64,7 @@ export function BuilderPanel() {
 
         <div className="flex items-center gap-4 w-full md:w-auto">
             <div className="text-right hidden md:block">
-                <div className="text-sm font-semibold">{selectedServices.length} Services Selected</div>
+                <div className="text-sm font-semibold">{totalVMs} VMs Deployed</div>
                 <div className="text-xs text-muted-foreground">Est. Cost: ~${(cpu * 50) + (ram/1024 * 10) + (storage * 0.1)}</div>
             </div>
             <Button onClick={() => navigate('/recommendations')} size="lg" className="w-full md:w-auto">
