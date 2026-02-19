@@ -20,7 +20,7 @@ func NewIPService(db *gorm.DB) *IPService {
 	return &IPService{db: db}
 }
 
-// ─── Constants (Ported from builder-store.ts) ────────────────────────────────
+// ─── Role zone config ────────────────────────────────────────────────────────
 
 type ZoneConfig struct {
 	Base  int
@@ -28,10 +28,12 @@ type ZoneConfig struct {
 	Label string
 }
 
+// ROLE_ZONE defines the starting offset and block-size for each hardware type
+// within a /24 subnet. The router's last octet (e.g. .1) is the gateway.
 var ROLE_ZONE = map[string]ZoneConfig{
 	"router":       {Base: 1, Step: 1, Label: "Router"},
 	"switch":       {Base: 10, Step: 1, Label: "Switch"},
-	"access_point": {Base: 50, Step: 1, Label: "AP"},
+	"access_point": {Base: 20, Step: 1, Label: "AP"},
 	"ups":          {Base: 80, Step: 1, Label: "UPS"},
 	"pdu":          {Base: 85, Step: 1, Label: "PDU"},
 	"disk":         {Base: 90, Step: 1, Label: "Disk"},
@@ -53,105 +55,149 @@ var NON_NETWORK_TYPES = map[string]bool{
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
-// CalculateNetwork reassigns IPs for the entire build
+// CalculateNetwork performs a graph-aware IP assignment:
+//   - Builds an undirected graph from stored edges
+//   - BFS from each router to discover which nodes belong to its subnet
+//   - Assigns IPs from that router's subnet (/24 prefix) to those nodes
+//   - Nodes not reachable from any router are left unassigned
 func (s *IPService) CalculateNetwork(buildID uuid.UUID) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
-		// 1. Fetch all nodes with their VMs
+		// 1. Load nodes and edges
 		var nodes []models.Node
 		if err := tx.Preload("VirtualMachines").Where("build_id = ?", buildID).Find(&nodes).Error; err != nil {
 			return err
 		}
-
-		// 2. Find Gateway
-		gateway := s.findGateway(nodes)
-		if gateway == "" {
-			// No router with IP? Try to find a router and assign default
-			for i, n := range nodes {
-				if n.Type == "router" {
-					nodes[i].IP = "192.168.1.1"
-					gateway = "192.168.1.1"
-					// Save immediately
-					if err := tx.Save(&nodes[i]).Error; err != nil {
-						return err
-					}
-					break
-				}
-			}
+		if len(nodes) == 0 {
+			return nil
 		}
 
-		if gateway == "" {
+		var edges []models.Edge
+		if err := tx.Where("build_id = ?", buildID).Find(&edges).Error; err != nil {
+			return err
+		}
+
+		// 2. Index nodes by ID for fast lookup
+		nodeByID := make(map[uuid.UUID]int) // value = index into nodes slice
+		for i := range nodes {
+			nodeByID[nodes[i].ID] = i
+		}
+
+		// 3. Build undirected adjacency list
+		adj := make(map[uuid.UUID][]uuid.UUID)
+		for _, e := range edges {
+			adj[e.SourceNodeID] = append(adj[e.SourceNodeID], e.TargetNodeID)
+			adj[e.TargetNodeID] = append(adj[e.TargetNodeID], e.SourceNodeID)
+		}
+
+		// 4. Collect routers; ensure each has a gateway IP
+		var routers []int // indices into nodes slice
+		for i := range nodes {
+			if nodes[i].Type == "router" {
+				if nodes[i].IP == "" {
+					nodes[i].IP = "192.168.1.1"
+				}
+				routers = append(routers, i)
+			}
+		}
+		if len(routers) == 0 {
 			return errors.New("no router found to establish gateway")
 		}
 
-		// 3. Reset IPs for non-routers (optional? or just recalculate gaps?)
-		// The requirement is "Reassign IPs", which implies a full recalculation or filling gaps.
-		// "builder-store.ts" logic: Resets all non-static IPs and re-assigns sequentially.
-		// To be safe and deterministic, let's clear IPs (except routers) and re-assign.
-
-		// In Go, we are working with a slice of structs.
-		// We need to keep router IPs.
-
-		// Create a working set of nodes to update
-		// We need to process them: Routers first, then others.
-
-		// Separate routers (keep them as anchors)
-		// Actually, builder-store logic: "Reset all non-static IPs... First pass: add routers... Second pass: assign others"
-
-		// Let's implement the logic:
-		// 1. Identify used offsets (from routers)
-		// 2. Iterate others and assign
-
-		// Note: We need to update the `nodes` slice in place and save later?
-		// Or save one by one?
-		// Saving one by one is safer for the loop state.
-
-		// Reset phase
+		// 5. Reset IPs for all non-router, networkable nodes
 		for i := range nodes {
-			if nodes[i].Type != "router" && !NON_NETWORK_TYPES[nodes[i].Type] {
+			if nodes[i].Type == "router" {
+				continue
+			}
+			if !NON_NETWORK_TYPES[nodes[i].Type] {
 				nodes[i].IP = ""
 			}
-			// Also reset VMs
 			for j := range nodes[i].VirtualMachines {
 				nodes[i].VirtualMachines[j].IP = ""
 			}
 		}
 
-		// We need a helper to get current state of "Used IPs" dynamically as we assign
-		// But passing the whole slice by value/pointer is tricky if we update it.
-		// Let's keep the slice updated.
+		// 6. BFS from each router — assign IPs from that router's subnet
+		//    Each router's subnet is derived from its own gateway IP.
+		//    Two routers with different IPs produce two independent address spaces.
+		//    Routers in the SAME /24 subnet share a usedOffsets map so devices
+		//    connected to different routers but in the same block don't collide.
+		type subnetKey = string
+		sharedOffsets := make(map[subnetKey]map[int]bool)
 
-		for i := range nodes {
-			if nodes[i].Type == "router" {
-				continue
-			} // Already has IP (or we kept it)
-			if NON_NETWORK_TYPES[nodes[i].Type] {
-				continue
+		visited := make(map[uuid.UUID]bool)
+		for _, ri := range routers {
+			router := &nodes[ri]
+			visited[router.ID] = true
+			gateway := router.IP
+			prefix := subnetPrefix(gateway)
+
+			// Initialize or extend the shared offset map for this subnet
+			if sharedOffsets[prefix] == nil {
+				sharedOffsets[prefix] = map[int]bool{parseLastOctet(gateway): true}
+			} else {
+				sharedOffsets[prefix][parseLastOctet(gateway)] = true
 			}
+			usedOffsets := sharedOffsets[prefix]
 
-			// Assign Node IP
-			newIP := s.assignIP(nodes[i].Type, gateway, nodes) // Pass all nodes (some have IPs, some empty)
-			if newIP != "" {
-				nodes[i].IP = newIP
-			}
+			// Track used last-octets within this router's /24 subnet
 
-			// Assign VM IPs
-			if len(nodes[i].VirtualMachines) > 0 && nodes[i].IP != "" {
-				for j := range nodes[i].VirtualMachines {
-					vmIP := s.assignVMIP(&nodes[i], nodes) // Pass host and all nodes
-					if vmIP != "" {
-						nodes[i].VirtualMachines[j].IP = vmIP
+			// BFS
+			queue := []uuid.UUID{router.ID}
+			for len(queue) > 0 {
+				cur := queue[0]
+				queue = queue[1:]
+
+				for _, neighborID := range adj[cur] {
+					if visited[neighborID] {
+						continue
+					}
+					visited[neighborID] = true
+					idx, ok := nodeByID[neighborID]
+					if !ok {
+						continue
+					}
+					n := &nodes[idx]
+					queue = append(queue, neighborID)
+
+					if NON_NETWORK_TYPES[n.Type] || n.Type == "router" {
+						continue
+					}
+
+					// Assign node IP from this router's subnet
+					ip := assignIPInSubnet(n.Type, gateway, usedOffsets)
+					if ip != "" {
+						n.IP = ip
+						zone := getZone(n.Type)
+						base := parseLastOctet(ip)
+						// Reserve only the host's own offset first so that VMs can
+						// claim the remaining slots within the block before it is sealed.
+						usedOffsets[base] = true
+
+						// Assign VM IPs within the host's block while slots remain open
+						for j := range n.VirtualMachines {
+							vmIP := assignVMIPInSubnet(n, usedOffsets)
+							if vmIP != "" {
+								n.VirtualMachines[j].IP = vmIP
+								usedOffsets[parseLastOctet(vmIP)] = true
+							}
+						}
+
+						// Seal the full block so future nodes don't land in this range
+						for k := 1; k < zone.Step; k++ {
+							usedOffsets[base+k] = true
+						}
 					}
 				}
 			}
 		}
 
-		// 4. Save changes
-		for _, n := range nodes {
-			if err := tx.Updates(&n).Error; err != nil {
+		// 7. Persist all nodes and their VMs
+		for i := range nodes {
+			if err := tx.Save(&nodes[i]).Error; err != nil {
 				return err
 			}
-			for _, vm := range n.VirtualMachines {
-				if err := tx.Updates(&vm).Error; err != nil {
+			for j := range nodes[i].VirtualMachines {
+				if err := tx.Save(&nodes[i].VirtualMachines[j]).Error; err != nil {
 					return err
 				}
 			}
@@ -163,96 +209,35 @@ func (s *IPService) CalculateNetwork(buildID uuid.UUID) error {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-func (s *IPService) findGateway(nodes []models.Node) string {
-	for _, n := range nodes {
-		if n.Type == "router" && n.IP != "" {
-			return n.IP
-		}
+func getZone(hwType string) ZoneConfig {
+	if z, ok := ROLE_ZONE[hwType]; ok {
+		return z
 	}
-	return ""
+	return FALLBACK_ZONE
 }
 
-func (s *IPService) subnetPrefix(gateway string) string {
-	parts := strings.Split(gateway, ".")
+// subnetPrefix returns the first three octets of an IP, e.g. "192.168.1"
+func subnetPrefix(ip string) string {
+	parts := strings.Split(ip, ".")
 	if len(parts) >= 3 {
 		return strings.Join(parts[0:3], ".")
 	}
 	return "192.168.1"
 }
 
-func (s *IPService) collectUsedOffsets(nodes []models.Node) map[int]bool {
-	used := make(map[int]bool)
-	for _, n := range nodes {
-		if n.IP != "" {
-			lastOctet := parseLastOctet(n.IP)
-			if lastOctet != -1 {
-				zone, ok := ROLE_ZONE[n.Type]
-				if !ok {
-					zone = FALLBACK_ZONE
-				}
-
-				// Reserve block
-				for i := 0; i < zone.Step; i++ {
-					used[lastOctet+i] = true
-				}
-			}
-		}
-		// Also reserved explicitly assigned VM IPs?
-		// In ts: "Also reserve any explicitly assigned VM IPs"
-		// Only if they fall outside the block?
-		// If they are in the block, they are covered.
-		// If they are static IPs elsewhere, they should be marked.
-		for _, vm := range n.VirtualMachines {
-			if vm.IP != "" {
-				octet := parseLastOctet(vm.IP)
-				if octet != -1 {
-					used[octet] = true
-				}
-			}
-		}
-	}
-	return used
-}
-
-func (s *IPService) collectUsedIPs(nodes []models.Node) map[int]bool {
-	used := make(map[int]bool)
-	for _, n := range nodes {
-		if n.IP != "" {
-			octet := parseLastOctet(n.IP)
-			if octet != -1 {
-				used[octet] = true
-			}
-		}
-		for _, vm := range n.VirtualMachines {
-			if vm.IP != "" {
-				octet := parseLastOctet(vm.IP)
-				if octet != -1 {
-					used[octet] = true
-				}
-			}
-		}
-	}
-	return used
-}
-
-func (s *IPService) assignIP(hwType string, gateway string, nodes []models.Node) string {
+// assignIPInSubnet finds the next free offset for hwType within the given
+// gateway's /24 subnet, skipping offsets already in usedOffsets.
+func assignIPInSubnet(hwType string, gateway string, usedOffsets map[int]bool) string {
 	if NON_NETWORK_TYPES[hwType] {
 		return ""
 	}
+	prefix := subnetPrefix(gateway)
+	zone := getZone(hwType)
 
-	prefix := s.subnetPrefix(gateway)
-	zone, ok := ROLE_ZONE[hwType]
-	if !ok {
-		zone = FALLBACK_ZONE
-	}
-
-	usedOffsets := s.collectUsedOffsets(nodes)
-
-	// Find next free slot in zone
-	for offset := zone.Base; offset < 250; offset += zone.Step {
+	for offset := zone.Base; offset < 250; offset++ {
 		blockFree := true
-		for i := 0; i < zone.Step; i++ {
-			if usedOffsets[offset+i] {
+		for k := 0; k < zone.Step; k++ {
+			if usedOffsets[offset+k] {
 				blockFree = false
 				break
 			}
@@ -261,35 +246,28 @@ func (s *IPService) assignIP(hwType string, gateway string, nodes []models.Node)
 			return fmt.Sprintf("%s.%d", prefix, offset)
 		}
 	}
-
 	return ""
 }
 
-func (s *IPService) assignVMIP(hostNode *models.Node, allNodes []models.Node) string {
-	usedIPs := s.collectUsedIPs(allNodes)
-
-	if hostNode.IP != "" {
-		prefix := s.subnetPrefix(hostNode.IP)
-		hostOctet := parseLastOctet(hostNode.IP)
-		if hostOctet == -1 {
-			return ""
-		}
-
-		zone, ok := ROLE_ZONE[hostNode.Type]
-		if !ok {
-			zone = FALLBACK_ZONE
-		}
-
-		// Container IPs start at host+1
-		for i := 1; i < zone.Step; i++ {
-			candidate := hostOctet + i
-			if !usedIPs[candidate] {
-				return fmt.Sprintf("%s.%d", prefix, candidate)
-			}
+// assignVMIPInSubnet assigns the next free IP after the host node's block
+// within the same subnet, for a VM/container.
+func assignVMIPInSubnet(host *models.Node, usedOffsets map[int]bool) string {
+	if host.IP == "" {
+		return ""
+	}
+	prefix := subnetPrefix(host.IP)
+	hostOctet := parseLastOctet(host.IP)
+	if hostOctet == -1 {
+		return ""
+	}
+	zone := getZone(host.Type)
+	// VMs live immediately after the host's reserved block
+	for i := 1; i < zone.Step; i++ {
+		candidate := hostOctet + i
+		if !usedOffsets[candidate] {
+			return fmt.Sprintf("%s.%d", prefix, candidate)
 		}
 	}
-	// Fallback? TS logic: "if host has no IP... assignIP(hostNode.Type...)"
-	// But host SHOULD have IP by now.
 	return ""
 }
 

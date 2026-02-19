@@ -125,11 +125,8 @@ export const useBuilderStore = create<BuilderState>()(
                 const newEdges = addEdge(connection, state.edges)
                 set({ edges: newEdges })
 
-                set({ edges: newEdges })
-
-                // Trigger backend recalculation
-                get().reassignAllIPs()
-
+                // Trigger graph-aware IP recalculation whenever a new edge is drawn
+                setTimeout(() => get().reassignAllIPs(), 0)
             },
 
             addService: (service) => {
@@ -182,9 +179,7 @@ export const useBuilderStore = create<BuilderState>()(
                         nodes: [...state.nodes, reactFlowNode]
                     };
                 });
-
-                // Trigger async recalculation
-                setTimeout(() => get().reassignAllIPs(), 0);
+                // No IP assignment on add — IPs are assigned when nodes are connected
             },
 
             removeHardware: (nodeId) =>
@@ -221,9 +216,6 @@ export const useBuilderStore = create<BuilderState>()(
                     y: orig.y + 40,
                     vms: [],  // don't duplicate VMs
                 }
-
-                // Trigger recalc
-                setTimeout(() => get().reassignAllIPs(), 0);
 
                 const rfNode: Node = {
                     id: newId,
@@ -329,9 +321,7 @@ export const useBuilderStore = create<BuilderState>()(
                         )
                     }
                 });
-
-                // Trigger async recalculation
-                setTimeout(() => get().reassignAllIPs(), 0);
+                // IPs are assigned on connection, not on VM add
             },
 
             removeVM: (nodeId, vmId) => {
