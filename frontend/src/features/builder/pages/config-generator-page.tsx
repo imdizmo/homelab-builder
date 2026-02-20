@@ -1,12 +1,8 @@
-import { useState, useCallback, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useBuilderStore } from "../store/builder-store"
 import { buildApi } from "../api/builds"
 import {
-    generateDockerCompose,
-    generateDotEnv,
-    generateAnsibleInventory,
     generateAnsiblePlaybook,
-    generateNginxConfig,
     generateTraefikLabels,
     generateIpPlan,
 } from "../lib/config-generator"
@@ -15,7 +11,7 @@ import type { IpAllocatorOptions } from "../lib/config-generator" // Use type fr
 import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import {
-    Download, Upload, Copy, Check, FileCode, Server, Settings,
+    Download, Copy, Check, FileCode, Server, Settings,
     Globe, Package, AlertCircle, ChevronDown, ChevronUp, Network, Home
 } from "lucide-react"
 import { toast } from "sonner"
@@ -76,50 +72,10 @@ function CodeBlock({ content, filename }: { content: string; filename: string })
     )
 }
 
-// ─── Import Section ───────────────────────────────────────────────────────────
-function ImportSection() {
-    const importLab = useBuilderStore(s => s.importLab)
-    const [error, setError] = useState('')
-    const [success, setSuccess] = useState(false)
-
-    const handleFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (!file) return
-        const reader = new FileReader()
-        reader.onload = (ev) => {
-            const text = ev.target?.result as string
-            const result = importLab(text)
-            if (result.ok) {
-                setSuccess(true)
-                setError('')
-                setTimeout(() => setSuccess(false), 3000)
-            } else {
-                setError(result.error ?? 'Import failed')
-            }
-        }
-        reader.readAsText(file)
-        e.target.value = ''
-    }, [importLab])
-
-    return (
-        <label className="flex items-center gap-2 cursor-pointer">
-            <input type="file" accept=".json,.homelab.json" className="hidden" onChange={handleFile} />
-            <Button variant="outline" size="sm" asChild>
-                <span>
-                    {success
-                        ? <><Check className="h-4 w-4 mr-2 text-green-500" /> Imported!</>
-                        : <><Upload className="h-4 w-4 mr-2" /> Import Lab</>
-                    }
-                </span>
-            </Button>
-            {error && <span className="text-xs text-destructive">{error}</span>}
-        </label>
-    )
-}
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function ConfigGeneratorPage() {
-    const { hardwareNodes, exportLab, loadBuild, clearCurrentBuild } = useBuilderStore()
+    const { hardwareNodes, loadBuild, clearCurrentBuild } = useBuilderStore()
     const [activeTab, setActiveTab] = useState<Tab>('docker-compose')
     const [domain, setDomain] = useState('homelab.local')
     const [labName, setLabName] = useState('my-homelab')
@@ -129,6 +85,13 @@ export default function ConfigGeneratorPage() {
     const [builds, setBuilds] = useState<{id: string, name: string}[]>([])
     const [selectedBuildId, setSelectedBuildId] = useState<string>("")
     const [loadingBuild, setLoadingBuild] = useState(false)
+    const [configBundle, setConfigBundle] = useState<{
+        docker_compose: string;
+        env: string;
+        ansible_inventory: string;
+        nginx: string;
+    } | null>(null)
+    const [loadingCompose, setLoadingCompose] = useState(false)
 
     // Load project list on mount
     useEffect(() => {
@@ -179,6 +142,22 @@ export default function ConfigGeneratorPage() {
         }
     }
 
+    // Fetch Config bundle from backend
+    useEffect(() => {
+        if (selectedBuildId) { // Fetch regardless of active tab so it's ready instantly
+            setLoadingCompose(true)
+            buildApi.generateConfig(selectedBuildId).then(res => {
+                setConfigBundle(res)
+            }).catch(err => {
+                console.error("Failed to generate compose", err)
+                toast.error("Failed to generate configurations from backend")
+                setConfigBundle(null)
+            }).finally(() => {
+                setLoadingCompose(false)
+            })
+        }
+    }, [selectedBuildId])
+
     // IP settings
     // IP settings (Defaults)
     // const [baseIp, setBaseIp] = useState('192.168.1.0')
@@ -224,12 +203,21 @@ export default function ConfigGeneratorPage() {
     const hasContent = allServices.length > 0 || hardwareNodes.length > 0
 
     function getContent(tab: Tab): string {
+        const fallbacks = {
+            'docker-compose': "# No containers deployed.",
+            'env': "# No environment variables required.",
+            'ansible-inventory': "# No hardware added.",
+            'nginx': "# Nginx not required.",
+        }
+
+        if (loadingCompose) return "# Generating from backend..."
+
         switch (tab) {
-            case 'docker-compose':    return generateDockerCompose(allServices, hardwareNodes)
-            case 'env':               return generateDotEnv(allServices)
-            case 'ansible-inventory': return generateAnsibleInventory(hardwareNodes, ipOpts)
+            case 'docker-compose':    return configBundle?.docker_compose || fallbacks['docker-compose']
+            case 'env':               return configBundle?.env || fallbacks['env']
+            case 'ansible-inventory': return configBundle?.ansible_inventory || fallbacks['ansible-inventory']
             case 'ansible-playbook':  return generateAnsiblePlaybook(allServices, hardwareNodes)
-            case 'nginx':             return generateNginxConfig(allServices, domain)
+            case 'nginx':             return configBundle?.nginx || fallbacks['nginx']
             case 'traefik':           return generateTraefikLabels(allServices, domain)
             case 'ip-plan':           return generateIpPlan(hardwareNodes, ipOpts)
         }
@@ -264,10 +252,7 @@ export default function ConfigGeneratorPage() {
                 </div>
 
                 <div className="flex gap-2 flex-wrap mr-16">
-                    <ImportSection />
-                    <Button variant="outline" size="sm" onClick={() => exportLab(labName)} disabled={!hasContent}>
-                        <Download className="h-4 w-4 mr-2" /> Export Lab (.homelab.json)
-                    </Button>
+                    {/* Import and Export moved to Projects Dashboard */}
                 </div>
             </div>
 

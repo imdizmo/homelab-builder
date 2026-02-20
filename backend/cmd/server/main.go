@@ -129,12 +129,16 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 			buildService := services.NewBuildService(db)
 			ipService := services.NewIPService(db)
 			buildHandler := handlers.NewBuildHandler(buildService, ipService)
+			configService := services.NewConfigService(db)
+			configHandler := handlers.NewConfigHandler(configService)
+
 			protected.GET("/builds", buildHandler.List)
 			protected.POST("/builds", buildHandler.Create)
 			protected.GET("/builds/:id", buildHandler.Get)
 			protected.PUT("/builds/:id", buildHandler.Update)
 			protected.DELETE("/builds/:id", buildHandler.Delete)
 			protected.POST("/builds/:id/calculate-network", buildHandler.CalculateNetwork)
+			protected.POST("/builds/:id/generate-config", configHandler.GenerateConfig)
 		}
 
 		// Admin routes (require authentication + admin role)

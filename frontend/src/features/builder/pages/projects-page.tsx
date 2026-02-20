@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../../admin/hooks/use-auth"
-import { Plus, Folder, Clock, MoreVertical, Trash2, Edit2, Play, HardDrive, Search } from "lucide-react" 
+import { Plus, Folder, Clock, MoreVertical, Trash2, Edit2, Play, HardDrive, Search, Download, Upload } from "lucide-react" 
 // Removed unused imports: ExternalLink, Cpu
 import { Button } from "../../../components/ui/button"
 import { Card } from "../../../components/ui/card"
@@ -43,6 +43,10 @@ export default function ProjectsPage() {
         }
     }, [isAuthenticated])
 
+    // Import states
+    const fileInputRef = useRef<HTMLInputElement>(null)
+    const [importData, setImportData] = useState<string | null>(null)
+
     const fetchBuilds = async () => {
         try {
             const data = await buildApi.list()
@@ -56,30 +60,88 @@ export default function ProjectsPage() {
     }
 
     const handleCreateNew = () => {
+        setImportData(null)
         setNewProjectName("New Project")
         setIsCreateOpen(true)
     }
 
+    const handleImportClick = () => {
+        if (fileInputRef.current) fileInputRef.current.click()
+    }
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        const reader = new FileReader()
+        reader.onload = (ev) => {
+            const text = ev.target?.result as string
+            try {
+                const parsed = JSON.parse(text)
+                if (!parsed.hardwareNodes && !parsed.nodes) {
+                    toast.error("Invalid .homelab.json file")
+                    return
+                }
+                setImportData(text)
+                let baseName = file.name.replace(".homelab.json", "").replace(".json", "")
+                if (!baseName) baseName = "Imported Project"
+                setNewProjectName(baseName)
+                setIsCreateOpen(true)
+            } catch (err) {
+                toast.error("Failed to parse JSON")
+            }
+        }
+        reader.readAsText(file)
+        e.target.value = ''
+    }
+
     const confirmCreate = async () => {
         try {
-            const name = newProjectName.trim() || "New Project"
+            const name = newProjectName.trim() || (importData ? "Imported Project" : "New Project")
             const newBuild = await buildApi.create({
                 name: name,
-                data: JSON.stringify({}), // Empty state
+                data: importData || JSON.stringify({}), 
                 thumbnail: "",
             });
             
-            // Navigate to builder
-            // Navigate to builder
-            loadBuild(newBuild.id, newBuild.name, {})
-            toast.success("Project created successfully")
-            toast.success("Project created successfully")
+            loadBuild(newBuild.id, newBuild.name, importData ? JSON.parse(importData) : {})
+            toast.success(importData ? "Project imported successfully" : "Project created successfully")
             navigate(`/builder/${newBuild.id}`)
         } catch (error) {
             console.error("Failed to create", error)
             toast.error("Failed to create project")
         } finally {
             setIsCreateOpen(false)
+            setImportData(null)
+        }
+    }
+
+    const handleExport = async (e: React.MouseEvent, build: Build) => {
+        e.stopPropagation()
+        try {
+            // The list view might have truncated or omitted .data, so we fetch the full representation.
+            const fullBuild = await buildApi.get(build.id)
+            const rawData = JSON.parse(fullBuild.data || '{}')
+            // Ensure the exported payload matches the .homelab.json schema required by the importer
+            const payload = {
+                version: 1,
+                name: fullBuild.name,
+                exportedAt: new Date().toISOString(),
+                hardwareNodes: rawData.hardwareNodes || [],
+                nodes: rawData.nodes || [],
+                edges: rawData.edges || [],
+                boughtItems: rawData.boughtItems || [],
+                showBought: rawData.showBought || false
+            }
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${fullBuild.name.replace(/[^a-z0-9]/gi, '-')}.homelab.json`
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success("Project exported")
+        } catch (err) {
+            toast.error("Failed to export project")
         }
     }
 
@@ -132,6 +194,10 @@ export default function ProjectsPage() {
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
+                    <input type="file" ref={fileInputRef} accept=".json,.homelab.json" className="hidden" onChange={handleFileChange} />
+                    <Button variant="outline" onClick={handleImportClick}>
+                        <Upload className="mr-2 h-4 w-4" /> Import
+                    </Button>
                     <Button onClick={handleCreateNew}>
                         <Plus className="mr-2 h-4 w-4" /> New Project
                     </Button>
@@ -192,6 +258,9 @@ export default function ProjectsPage() {
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpen(build) }}>
                                                     <Edit2 className="mr-2 h-4 w-4" /> Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={(e) => handleExport(e, build)}>
+                                                    <Download className="mr-2 h-4 w-4" /> Export
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={(e) => handleDelete(e, build.id)}>
                                                     <Trash2 className="mr-2 h-4 w-4" /> Delete

@@ -68,11 +68,7 @@ interface BuilderState {
 
     clear: () => void
 
-    // Export / Import
-    exportLab: (name?: string) => void
-    importLab: (json: string) => { ok: boolean; error?: string }
-
-    // API Persistence
+    // ── API Persistence ────────────────────────────────────────────────
     currentBuildId: string | null
     setCurrentBuildId: (id: string | null) => void
     clearCurrentBuild: () => void
@@ -435,43 +431,6 @@ export const useBuilderStore = create<BuilderState>()(
             setShowBought: (v) => set({ showBought: v }),
 
             clear: () => set({ hardwareNodes: [], nodes: [], edges: [], boughtItems: [] }),
-
-            // ── Export / Import ────────────────────────────────────────────────
-            exportLab: (name = 'my-homelab') => {
-                const { hardwareNodes, nodes, edges } = get()
-                const payload = {
-                    version: 1,
-                    name,
-                    exportedAt: new Date().toISOString(),
-                    hardwareNodes,
-                    nodes,
-                    edges,
-                }
-                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-                const url = URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = url
-                a.download = `${name.replace(/[^a-z0-9]/gi, '-')}.homelab.json`
-                a.click()
-                URL.revokeObjectURL(url)
-            },
-
-            importLab: (json: string) => {
-                try {
-                    const payload = JSON.parse(json)
-                    if (!payload.version) {
-                        return { ok: false, error: 'Invalid .homelab.json format' }
-                    }
-                    set({
-                        hardwareNodes: payload.hardwareNodes ?? [],
-                        nodes: payload.nodes ?? [],
-                        edges: payload.edges ?? [],
-                    })
-                    return { ok: true }
-                } catch {
-                    return { ok: false, error: 'Failed to parse JSON' }
-                }
-            },
 
             // ── API Persistence ────────────────────────────────────────────────
             setCurrentBuildId: (id) => set({ currentBuildId: id }),

@@ -46,4 +46,8 @@ export const buildApi = {
     calculateNetwork: async (id: string) => {
         await api.post(`/api/builds/${id}/calculate-network`, {});
     },
+    generateConfig: async (id: string) => {
+        const response = await api.post<{ docker_compose: string, env: string, ansible_inventory: string, nginx: string }>(`/api/builds/${id}/generate-config`, {});
+        return response;
+    },
 };
