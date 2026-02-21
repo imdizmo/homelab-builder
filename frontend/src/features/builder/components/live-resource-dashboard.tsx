@@ -48,6 +48,22 @@ export function LiveResourceDashboard() {
                 totalStorageGb += 256;
             }
 
+            // Aggregate internal components (disks, NAS drives, GPUs) into totals
+            if (node.internal_components) {
+                node.internal_components.forEach(comp => {
+                    if (!comp.details) return;
+                    // Disks, NAS, HBA contribute storage
+                    if (['disk', 'nas', 'hba'].includes(comp.type)) {
+                        totalStorageGb += parseSpec(String(comp.details.storage));
+                    }
+                    // GPUs contribute VRAM as dedicated RAM
+                    if (comp.type === 'gpu') {
+                        const vram = parseSpec(String(comp.details.ram));
+                        totalRamMb += vram < 1024 ? vram * 1024 : vram;
+                    }
+                });
+            }
+
             // Usage based on deployed VMs/Services
             if (node.vms) {
                 node.vms.forEach(vm => {

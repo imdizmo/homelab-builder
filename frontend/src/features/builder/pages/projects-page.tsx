@@ -270,14 +270,11 @@ export default function ProjectsPage() {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredBuilds.map(build => {
-                        // Quick stats parsing
+                        // The backend preloads the structural `nodes` array for counting
                         let nodeCount = 0
-                        try {
-                            if (build.data) {
-                                const d = JSON.parse(build.data)
-                                if (d.nodes) nodeCount = d.nodes.filter((n: any) => n.type==='hardware').length
-                            }
-                        } catch {}
+                        if (build.nodes && Array.isArray(build.nodes)) {
+                            nodeCount = build.nodes.length
+                        }
 
                         return (
                             <Card 

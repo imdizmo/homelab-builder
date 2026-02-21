@@ -151,6 +151,20 @@ export function NodePropertiesPanel() {
     const totalCpu = Number(selectedNode.details?.cpu) || 0;
     const totalRamGB = Number(selectedNode.details?.ram) || 0;
     const totalRamMB = totalRamGB < 1000 ? totalRamGB * 1024 : totalRamGB;
+
+    // Sum storage from base details + internal disk/NAS components
+    let totalStorageGB = Number(selectedNode.details?.storage) || 0;
+    let totalGpuRamMB = 0;
+    (selectedNode.internal_components || []).forEach(comp => {
+        if (!comp.details) return;
+        if (['disk', 'nas', 'hba'].includes(comp.type)) {
+            totalStorageGB += Number(comp.details.storage) || 0;
+        }
+        if (comp.type === 'gpu') {
+            const vram = Number(comp.details.ram) || 0;
+            totalGpuRamMB += vram < 1000 ? vram * 1024 : vram;
+        }
+    });
     
     const cpuWarning = totalCpu > 0 && usedCpu > totalCpu;
     const ramWarning = totalRamMB > 0 && usedRam > totalRamMB;

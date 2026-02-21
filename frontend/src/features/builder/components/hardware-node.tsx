@@ -154,7 +154,7 @@ export const HardwareNode = memo(({ id, data, selected }: NodeProps) => {
         <div className="relative group">
             <Card 
                 className={cn(
-                    'transition-all duration-200 border-2 overflow-hidden shadow-sm',
+                    'transition-all duration-200 border-2 shadow-sm',
                     (hasVMs || hasComponents) ? 'w-56' : 'w-48',
                     cfg.border, cfg.bg,
                     hasWarning ? 'border-destructive/60' : '',

@@ -27,14 +27,34 @@ export function ComponentDetailsDialog({ open, onOpenChange, onConfirm, initialT
     const [storageValue, setStorageValue] = useState("")
     const [storageUnit, setStorageUnit] = useState("TB")
 
-    // Helper to parse "32GB" -> ["32", "GB"]
-    const parseValueUnit = (val?: string): [string, string] => {
-        if (!val) return ["", ""]
-        const match = val.match(/^(\d+(\.\d+)?)?\s*(MB|GB|TB|TB)?$/i)
-        if (match) {
-            return [match[1] || "", (match[3] || "").toUpperCase()]
+    // Helper: convert storage/RAM value (raw number OR old string "4TB"/"500GB") -> [display value, unit]
+    const formatStorageForDisplay = (val?: number | string): [string, string] => {
+        if (val === undefined || val === null || val === '') return ['', 'GB']
+        // If already a number (new format: raw GB stored as int)
+        if (typeof val === 'number') {
+            if (val >= 1000 && val % 1000 === 0) return [String(val / 1000), 'TB']
+            return [String(val), 'GB']
         }
-        return [val, ""] // Fallback
+        // Handle old string format: "4TB", "500GB", "2000"
+        const match = val.match(/^(\d+(?:\.\d+)?)\s*(MB|GB|TB)?$/i)
+        if (match) {
+            const n = parseFloat(match[1])
+            const unit = (match[2] || 'GB').toUpperCase()
+            return [String(n), unit]
+        }
+        return ['', 'GB']
+    }
+
+    const formatRamForDisplay = (val?: number | string): [string, string] => {
+        if (val === undefined || val === null || val === '') return ['', 'GB']
+        if (typeof val === 'number') return [String(val), 'GB']
+        const match = val.match(/^(\d+(?:\.\d+)?)\s*(MB|GB|TB)?$/i)
+        if (match) {
+            const n = parseFloat(match[1])
+            const unit = (match[2] || 'GB').toUpperCase()
+            return [String(n), unit]
+        }
+        return ['', 'GB']
     }
 
     useEffect(() => {
@@ -43,16 +63,18 @@ export function ComponentDetailsDialog({ open, onOpenChange, onConfirm, initialT
             setModel(initialDetails?.model || "")
             setSpec(initialDetails || {})
 
-            setCpuCores(initialDetails?.cpu_cores?.toString() || "")
+            // Support both `cpu` (new) and `cpu_cores` (legacy)
+            setCpuCores(initialDetails?.cpu?.toString() || initialDetails?.cpu_cores?.toString() || "")
 
-            const [rVal, rUnit] = parseValueUnit(initialDetails?.ram?.toString())
+            // RAM: may be stored as number (GB) OR old string ("32GB")
+            const [rVal, rUnit] = formatRamForDisplay(initialDetails?.ram)
             setRamValue(rVal)
-            if (rUnit) setRamUnit(rUnit) // Keep default if parsing failed/empty
+            setRamUnit(rUnit)
 
-            const [sVal, sUnit] = parseValueUnit(initialDetails?.storage?.toString())
+            // Storage: may be stored as number (GB) OR old string ("4TB", "500GB")
+            const [sVal, sUnit] = formatStorageForDisplay(initialDetails?.storage)
             setStorageValue(sVal)
-            // Default storage unit logic could be better, but TB default is fine for now
-            if (sUnit) setStorageUnit(sUnit)
+            setStorageUnit(sUnit)
         }
     }, [open, initialName, initialDetails])
 
@@ -191,7 +213,7 @@ export function ComponentDetailsDialog({ open, onOpenChange, onConfirm, initialT
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button onClick={handleConfirm}>Add Component</Button>
+                    <Button onClick={handleConfirm}>{initialName ? 'Save Changes' : 'Add Component'}</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

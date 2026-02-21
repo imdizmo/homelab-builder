@@ -444,11 +444,33 @@ export const useBuilderStore = create<BuilderState>()(
             setProjectName: (name) => set({ projectName: name }),
 
             loadBuild: (id, name, data) => {
+                const hardwareNodes: HardwareNode[] = data.hardwareNodes || []
+
+                // Build a lookup for fast access
+                const hwMap = new Map<string, HardwareNode>(hardwareNodes.map(n => [n.id, n]))
+
+                // Merge authoritative internal_components and vms from hardwareNodes into
+                // the React Flow node .data objects — they may have diverged if the RF nodes
+                // were saved before these fields were introduced or failed to sync.
+                const syncedRfNodes = (data.nodes || []).map((rfn: any) => {
+                    const hw = hwMap.get(rfn.id)
+                    if (!hw) return rfn
+                    return {
+                        ...rfn,
+                        data: {
+                            ...rfn.data,
+                            internal_components: hw.internal_components ?? rfn.data?.internal_components ?? [],
+                            vms: hw.vms ?? rfn.data?.vms ?? [],
+                            details: hw.details ?? rfn.data?.details,
+                        }
+                    }
+                })
+
                 set({
                     currentBuildId: id,
                     projectName: name,
-                    hardwareNodes: data.hardwareNodes || [],
-                    nodes: data.nodes || [],
+                    hardwareNodes,
+                    nodes: syncedRfNodes,
                     edges: data.edges || [],
                     boughtItems: data.boughtItems || [],
                     showBought: data.showBought || false
@@ -456,11 +478,27 @@ export const useBuilderStore = create<BuilderState>()(
             },
 
             getBuildData: () => {
-                // Return a JSON-serializable snapshot
+                // Return a JSON-serializable snapshot.
+                // Sync hardwareNodes data (authoritative) into the RF node .data
+                // objects before saving so internal_components are never lost.
                 const state = get();
+                const hwMap = new Map<string, HardwareNode>(state.hardwareNodes.map(n => [n.id, n]))
+                const syncedNodes = state.nodes.map(rfn => {
+                    const hw = hwMap.get(rfn.id)
+                    if (!hw) return rfn
+                    return {
+                        ...rfn,
+                        data: {
+                            ...rfn.data,
+                            internal_components: hw.internal_components ?? [],
+                            vms: hw.vms ?? [],
+                            details: hw.details,
+                        }
+                    }
+                })
                 return {
                     hardwareNodes: state.hardwareNodes,
-                    nodes: state.nodes,
+                    nodes: syncedNodes,
                     edges: state.edges,
                     boughtItems: state.boughtItems,
                     showBought: state.showBought

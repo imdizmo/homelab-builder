@@ -294,9 +294,17 @@ func (s *BuildService) migrateLegacyData(build *models.Build) error {
 
 func (s *BuildService) ListByUser(userID uuid.UUID) ([]models.Build, error) {
 	var builds []models.Build
-	// Select only metadata, not the huge Data blob for the list view
-	if err := s.db.Select("id, user_id, name, thumbnail, created_at, updated_at").Where("user_id = ?", userID).Order("updated_at desc").Find(&builds).Error; err != nil {
+	// Omit the heavy Data blob but still load the relational Nodes for counting.
+	// Note: GORM Preload doesn't work when Select() omits the primary key columns;
+	// the fix is to NOT use Select() column filtering and instead omit Data via the model.
+	// We fetch full rows but the Data column on the struct is populated; to avoid sending
+	// megabytes over the wire we clear it after loading.
+	if err := s.db.Preload("Nodes").Where("user_id = ?", userID).Order("updated_at desc").Find(&builds).Error; err != nil {
 		return nil, err
+	}
+	// Strip data blob to reduce payload size - frontend doesn't need it for the list view
+	for i := range builds {
+		builds[i].Data = ""
 	}
 	return builds, nil
 }
