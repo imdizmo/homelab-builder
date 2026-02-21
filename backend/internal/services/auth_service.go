@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -92,24 +93,25 @@ func (s *AuthService) DevLogin(email string) (*AuthResponse, error) {
 
 func (s *AuthService) loginOrRegister(email, name, googleID, avatarURL string) (*AuthResponse, error) {
 	var user models.User
+
 	// 1. Try to find by Google ID
-	result := s.db.Where("google_id = ?", googleID).First(&user)
+	err := s.db.Where("google_id = ?", googleID).First(&user).Error
 
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// 2. Not found by Google ID — check if email exists
-			result = s.db.Where("email = ?", email).First(&user)
+			emailErr := s.db.Where("email = ?", email).First(&user).Error
 
-			if result.Error == nil {
+			if emailErr == nil {
 				// Found by email! Link this account to the Google ID
 				// This handles the "Seed User" case where GoogleID was empty
 				user.GoogleID = googleID
 				user.Name = name
 				user.AvatarURL = avatarURL
-				if err := s.db.Save(&user).Error; err != nil {
-					return nil, fmt.Errorf("failed to link existing user: %w", err)
+				if saveErr := s.db.Save(&user).Error; saveErr != nil {
+					return nil, fmt.Errorf("failed to link existing user: %w", saveErr)
 				}
-			} else if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			} else if errors.Is(emailErr, gorm.ErrRecordNotFound) {
 				// 3. Not found by Email either — Create new user
 				user = models.User{
 					GoogleID:  googleID,
@@ -117,16 +119,16 @@ func (s *AuthService) loginOrRegister(email, name, googleID, avatarURL string) (
 					Name:      name,
 					AvatarURL: avatarURL,
 				}
-				if err := s.db.Create(&user).Error; err != nil {
-					return nil, fmt.Errorf("failed to create user: %w", err)
+				if createErr := s.db.Create(&user).Error; createErr != nil {
+					return nil, fmt.Errorf("failed to create user: %w", createErr)
 				}
 			} else {
 				// DB error on email check
-				return nil, fmt.Errorf("database error checking email: %w", result.Error)
+				return nil, fmt.Errorf("database error checking email: %w", emailErr)
 			}
 		} else {
 			// DB error on google_id check
-			return nil, fmt.Errorf("database error checking google_id: %w", result.Error)
+			return nil, fmt.Errorf("database error checking google_id: %w", err)
 		}
 	} else {
 		// Found by Google ID — Update details
@@ -154,6 +156,25 @@ func (s *AuthService) GetCurrentUser(userID uuid.UUID) (*models.User, error) {
 	if err := s.db.First(&user, "id = ?", userID).Error; err != nil {
 		return nil, err
 	}
+	return &user, nil
+}
+
+func (s *AuthService) UpdatePreferences(userID uuid.UUID, prefs map[string]interface{}) (*models.User, error) {
+	var user models.User
+	if err := s.db.First(&user, "id = ?", userID).Error; err != nil {
+		return nil, err
+	}
+
+	rawPrefs, err := json.Marshal(prefs)
+	if err != nil {
+		return nil, fmt.Errorf("invalid preferences payload: %w", err)
+	}
+
+	user.Preferences = rawPrefs
+	if err := s.db.Save(&user).Error; err != nil {
+		return nil, fmt.Errorf("failed to save preferences: %w", err)
+	}
+
 	return &user, nil
 }
 

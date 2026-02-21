@@ -34,6 +34,9 @@ export default function ProjectsPage() {
     const [newProjectName, setNewProjectName] = useState("")
     const [isDeleteOpen, setIsDeleteOpen] = useState(false)
     const [projectToDelete, setProjectToDelete] = useState<string | null>(null)
+    const [isRenameOpen, setIsRenameOpen] = useState(false)
+    const [projectToRename, setProjectToRename] = useState<Build | null>(null)
+    const [renameValue, setRenameValue] = useState("")
 
     useEffect(() => {
         if (isAuthenticated) {
@@ -171,6 +174,49 @@ export default function ProjectsPage() {
         }
     }
 
+    const handleDuplicate = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation()
+        try {
+            const duplicatedBuild = await buildApi.duplicate(id)
+            setBuilds(prev => [duplicatedBuild, ...prev])
+            toast.success("Project duplicated successfully")
+        } catch (error) {
+            console.error("Failed to duplicate", error)
+            toast.error("Failed to duplicate project")
+        }
+    }
+
+    const handleRenameClick = (e: React.MouseEvent, build: Build) => {
+        e.stopPropagation()
+        setProjectToRename(build)
+        setRenameValue(build.name)
+        setIsRenameOpen(true)
+    }
+
+    const confirmRename = async () => {
+        if (!projectToRename || !renameValue.trim()) return
+        try {
+            const newName = renameValue.trim()
+            // We need full build data to rename cleanly if we use update endpoint since data is required
+            // However, it's safer to fetch the original, rename, and save.
+            const fullBuild = await buildApi.get(projectToRename.id)
+            const updated = await buildApi.update(projectToRename.id, {
+                name: newName,
+                data: fullBuild.data,
+                thumbnail: fullBuild.thumbnail
+            })
+            // Update local state listing
+            setBuilds(prev => prev.map(b => b.id === updated.id ? { ...b, name: updated.name } : b))
+            toast.success("Project renamed")
+        } catch (error) {
+            console.error("Failed to rename", error)
+            toast.error("Failed to rename project")
+        } finally {
+            setIsRenameOpen(false)
+            setProjectToRename(null)
+        }
+    }
+
     const filteredBuilds = builds.filter(b => 
         b.name.toLowerCase().includes(search.toLowerCase())
     )
@@ -259,6 +305,12 @@ export default function ProjectsPage() {
                                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpen(build) }}>
                                                     <Edit2 className="mr-2 h-4 w-4" /> Edit
                                                 </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={(e) => handleRenameClick(e, build)}>
+                                                    <Edit2 className="mr-2 h-4 w-4" /> Rename
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={(e) => handleDuplicate(e, build.id)}>
+                                                    <Folder className="mr-2 h-4 w-4" /> Duplicate
+                                                </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={(e) => handleExport(e, build)}>
                                                     <Download className="mr-2 h-4 w-4" /> Export
                                                 </DropdownMenuItem>
@@ -344,6 +396,31 @@ export default function ProjectsPage() {
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>Cancel</Button>
                         <Button variant="destructive" onClick={confirmDelete}>Delete</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Rename Modal */}
+            <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Rename Project</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <Label htmlFor="rename-project" className="mb-2 block">New Project Name</Label>
+                        <Input 
+                            id="rename-project" 
+                            value={renameValue} 
+                            onChange={(e) => setRenameValue(e.target.value)} 
+                            autoFocus
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') confirmRename()
+                            }}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsRenameOpen(false)}>Cancel</Button>
+                        <Button onClick={confirmRename}>Save</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

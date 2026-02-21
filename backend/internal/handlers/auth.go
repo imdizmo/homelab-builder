@@ -118,3 +118,33 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 	// Return result directly without "data" wrapper
 	c.JSON(http.StatusOK, user)
 }
+
+func (h *AuthHandler) UpdatePreferences(c *gin.Context) {
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
+		return
+	}
+
+	userID, ok := userIDStr.(uuid.UUID)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user session"})
+		return
+	}
+
+	var input struct {
+		Preferences map[string]interface{} `json:"preferences" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Preferences mapping is required"})
+		return
+	}
+
+	user, err := h.service.UpdatePreferences(userID, input.Preferences)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}

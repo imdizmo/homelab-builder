@@ -37,17 +37,17 @@ const PRESETS: {
             {
                 label: 'Raspberry Pi 5 8GB',
                 type: 'sbc', icon: Cpu, sub: 'BCM2712 · 8GB · ~$90',
-                data: { name: 'Raspberry Pi 5', details: { model: 'Raspberry Pi 5 (8GB)', cpu: 'Broadcom BCM2712', ram: '8GB', price_est: 90 } }
+                data: { name: 'Raspberry Pi 5', details: { model: 'Raspberry Pi 5 (8GB BCM2712)', cpu: 4, ram: 8, price_est: 90 } }
             },
             {
                 label: 'Raspberry Pi 4 4GB',
                 type: 'sbc', icon: Cpu, sub: 'BCM2711 · 4GB · ~$55',
-                data: { name: 'Raspberry Pi 4', details: { model: 'Raspberry Pi 4 (4GB)', cpu: 'Broadcom BCM2711', ram: '4GB', price_est: 55 } }
+                data: { name: 'Raspberry Pi 4', details: { model: 'Raspberry Pi 4 (4GB BCM2711)', cpu: 4, ram: 4, price_est: 55 } }
             },
             {
                 label: 'Orange Pi 5 Plus',
                 type: 'sbc', icon: Cpu, sub: 'RK3588 · 16GB · ~$110',
-                data: { name: 'Orange Pi 5 Plus', details: { model: 'Orange Pi 5 Plus', cpu: 'Rockchip RK3588', ram: '16GB', price_est: 110 } }
+                data: { name: 'Orange Pi 5 Plus', details: { model: 'Orange Pi 5 Plus (RK3588)', cpu: 8, ram: 16, price_est: 110 } }
             },
         ]
     },
@@ -57,22 +57,22 @@ const PRESETS: {
             {
                 label: 'Intel NUC 13 i7',
                 type: 'minipc', icon: Monitor, sub: 'i7-1360P · 32GB · ~$650',
-                data: { name: 'Intel NUC 13', details: { model: 'NUC13ANHi7', cpu: 'i7-1360P', ram: '32GB', price_est: 650 } }
+                data: { name: 'Intel NUC 13', details: { model: 'NUC13ANHi7 (i7-1360P)', cpu: 12, ram: 32, price_est: 650 } }
             },
             {
                 label: 'Beelink EQ12',
                 type: 'minipc', icon: Monitor, sub: 'N100 · 16GB · ~$180',
-                data: { name: 'Beelink EQ12', details: { model: 'EQ12', cpu: 'Intel N100', ram: '16GB', price_est: 180 } }
+                data: { name: 'Beelink EQ12', details: { model: 'EQ12 (Intel N100)', cpu: 4, ram: 16, price_est: 180 } }
             },
             {
                 label: 'Minisforum MS-01',
                 type: 'minipc', icon: Monitor, sub: 'i9-12900H · 64GB · ~$600',
-                data: { name: 'Minisforum MS-01', details: { model: 'MS-01', cpu: 'i9-12900H', ram: '64GB', price_est: 600 } }
+                data: { name: 'Minisforum MS-01', details: { model: 'MS-01 (i9-12900H)', cpu: 14, ram: 64, price_est: 600 } }
             },
             {
                 label: 'Beelink SER6 Pro',
                 type: 'minipc', icon: Monitor, sub: 'R7-6800H · 32GB · ~$350',
-                data: { name: 'Beelink SER6 Pro', details: { model: 'SER6 Pro', cpu: 'Ryzen 7 6800H', ram: '32GB', price_est: 350 } }
+                data: { name: 'Beelink SER6 Pro', details: { model: 'SER6 Pro (Ryzen 7 6800H)', cpu: 8, ram: 32, price_est: 350 } }
             },
         ]
     },
@@ -82,17 +82,17 @@ const PRESETS: {
             {
                 label: 'Dell PowerEdge R720',
                 type: 'server', icon: Server, sub: '2× E5-2670 · 128GB · ~$300',
-                data: { name: 'Dell R720', details: { model: 'PowerEdge R720', cpu: '2× Xeon E5-2670', ram: '128GB', price_est: 300 } }
+                data: { name: 'Dell R720', details: { model: 'PowerEdge R720 (2× Xeon E5-2670)', cpu: 16, ram: 128, price_est: 300 } }
             },
             {
                 label: 'HP ProLiant DL380 G9',
                 type: 'server', icon: Server, sub: '2× E5-2680v4 · 256GB · ~$500',
-                data: { name: 'HP DL380 G9', details: { model: 'ProLiant DL380 G9', cpu: '2× Xeon E5-2680v4', ram: '256GB', price_est: 500 } }
+                data: { name: 'HP DL380 G9', details: { model: 'ProLiant DL380 G9 (2× Xeon E5-2680v4)', cpu: 28, ram: 256, price_est: 500 } }
             },
             {
                 label: 'Supermicro X10SL7',
                 type: 'server', icon: Server, sub: 'E3-1245v3 · 32GB · ~$200',
-                data: { name: 'Supermicro X10SL7', details: { model: 'X10SL7-F', cpu: 'Xeon E3-1245v3', ram: '32GB', price_est: 200 } }
+                data: { name: 'Supermicro X10SL7', details: { model: 'X10SL7-F (Xeon E3-1245v3)', cpu: 4, ram: 32, price_est: 200 } }
             },
         ]
     },
@@ -102,17 +102,17 @@ const PRESETS: {
             {
                 label: 'Synology DS923+',
                 type: 'nas', icon: HardDrive, sub: 'R1600 · 4GB · ~$550',
-                data: { name: 'Synology DS923+', details: { model: 'DS923+', cpu: 'Ryzen R1600', ram: '4GB', price_est: 550 } }
+                data: { name: 'Synology DS923+', details: { model: 'DS923+ (Ryzen R1600)', cpu: 2, ram: 4, price_est: 550 } }
             },
             {
                 label: 'Synology DS1522+',
                 type: 'nas', icon: HardDrive, sub: 'R1600 · 8GB · ~$700',
-                data: { name: 'Synology DS1522+', details: { model: 'DS1522+', cpu: 'Ryzen R1600', ram: '8GB', price_est: 700 } }
+                data: { name: 'Synology DS1522+', details: { model: 'DS1522+ (Ryzen R1600)', cpu: 2, ram: 8, price_est: 700 } }
             },
             {
                 label: 'QNAP TS-464',
                 type: 'nas', icon: HardDrive, sub: 'N5105 · 8GB · ~$500',
-                data: { name: 'QNAP TS-464', details: { model: 'TS-464', cpu: 'Intel N5105', ram: '8GB', price_est: 500 } }
+                data: { name: 'QNAP TS-464', details: { model: 'TS-464 (Intel N5105)', cpu: 4, ram: 8, price_est: 500 } }
             },
         ]
     },
@@ -122,17 +122,17 @@ const PRESETS: {
             {
                 label: 'Unifi UDM Pro',
                 type: 'router', icon: Router, sub: 'Quad-core · 4GB · ~$380',
-                data: { name: 'UDM Pro', details: { model: 'UniFi Dream Machine Pro', cpu: 'Quad-core 1.7GHz', ram: '4GB', price_est: 380 } }
+                data: { name: 'UDM Pro', details: { model: 'UniFi Dream Machine Pro', cpu: 4, ram: 4, price_est: 380 } }
             },
             {
                 label: 'Unifi USW-24-PoE',
                 type: 'switch', icon: CircuitBoard, sub: '24-port PoE · ~$300',
-                data: { name: 'USW-24-PoE', details: { model: 'UniFi Switch 24 PoE', price_est: 300 } }
+                data: { name: 'USW-24-PoE', details: { model: 'UniFi Switch 24 PoE', ports: 24, price_est: 300 } }
             },
             {
                 label: 'TP-Link TL-SG108E',
                 type: 'switch', icon: CircuitBoard, sub: '8-port managed · ~$30',
-                data: { name: 'TL-SG108E', details: { model: 'TP-Link TL-SG108E', price_est: 30 } }
+                data: { name: 'TL-SG108E', details: { model: 'TP-Link TL-SG108E', ports: 8, price_est: 30 } }
             },
         ]
     },
@@ -142,17 +142,17 @@ const PRESETS: {
             {
                 label: 'LSI 9300-8i HBA',
                 type: 'hba', icon: Plug, sub: 'PCIe 3.0 · 8-port SAS/SATA · ~$80',
-                data: { name: 'LSI 9300-8i', details: { model: 'LSI SAS 9300-8i', price_est: 80 } }
+                data: { name: 'LSI 9300-8i', details: { model: 'LSI SAS 9300-8i', ports: 8, price_est: 80 } }
             },
             {
                 label: 'NVIDIA RTX 3060',
                 type: 'gpu', icon: Layers, sub: '12GB VRAM · ~$300',
-                data: { name: 'RTX 3060', details: { model: 'NVIDIA GeForce RTX 3060', ram: '12GB VRAM', price_est: 300 } }
+                data: { name: 'RTX 3060', details: { model: 'NVIDIA GeForce RTX 3060', ram: 12, price_est: 300 } }
             },
             {
                 label: 'Intel X550-T2 NIC',
                 type: 'hba', icon: Plug, sub: '2× 10GbE · ~$120',
-                data: { name: 'Intel X550-T2', details: { model: 'Intel X550-T2', price_est: 120 } }
+                data: { name: 'Intel X550-T2', details: { model: 'Intel X550-T2', ports: 2, price_est: 120 } }
             },
         ]
     },
@@ -162,17 +162,17 @@ const PRESETS: {
             {
                 label: 'Seagate Exos 8TB',
                 type: 'disk', icon: DiskIcon, sub: 'HDD · SATA · ~$150',
-                data: { name: 'Seagate Exos 8TB', details: { model: 'Seagate Exos X18 8TB', storage: '8TB HDD', price_est: 150 } }
+                data: { name: 'Seagate Exos 8TB', details: { model: 'Seagate Exos X18 8TB', storage: 8000, price_est: 150 } }
             },
             {
                 label: 'Samsung 870 EVO 2TB',
                 type: 'disk', icon: DiskIcon, sub: 'SSD · SATA · ~$130',
-                data: { name: 'Samsung 870 EVO 2TB', details: { model: 'Samsung 870 EVO', storage: '2TB SSD', price_est: 130 } }
+                data: { name: 'Samsung 870 EVO 2TB', details: { model: 'Samsung 870 EVO', storage: 2000, price_est: 130 } }
             },
             {
                 label: 'WD Red Plus 4TB',
                 type: 'disk', icon: DiskIcon, sub: 'HDD · NAS-optimized · ~$90',
-                data: { name: 'WD Red Plus 4TB', details: { model: 'WD Red Plus', storage: '4TB HDD', price_est: 90 } }
+                data: { name: 'WD Red Plus 4TB', details: { model: 'WD Red Plus', storage: 4000, price_est: 90 } }
             },
         ]
     },

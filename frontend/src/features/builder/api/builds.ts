@@ -43,6 +43,10 @@ export const buildApi = {
     delete: async (id: string) => {
         await api.del(`/api/builds/${id}`);
     },
+    duplicate: async (id: string) => {
+        const response = await api.post<Build>(`/api/builds/${id}/duplicate`, {});
+        return response;
+    },
     calculateNetwork: async (id: string) => {
         await api.post(`/api/builds/${id}/calculate-network`, {});
     },

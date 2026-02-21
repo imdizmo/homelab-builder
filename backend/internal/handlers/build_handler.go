@@ -154,3 +154,27 @@ func (h *BuildHandler) CalculateNetwork(c *gin.Context) {
 		"build_id": id,
 	})
 }
+
+func (h *BuildHandler) Duplicate(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		return
+	}
+
+	build, err := h.service.Duplicate(id, userID.(uuid.UUID))
+	if err != nil {
+		fmt.Printf("Build Duplicate Error: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to duplicate build"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, build)
+}

@@ -35,6 +35,23 @@ export interface Service {
     created_at: string;
 }
 
+export interface CatalogComponent {
+    id: string;
+    category: string;
+    brand: string;
+    model: string;
+    spec: Record<string, any>;
+    price_est: number;
+    currency: string;
+    buy_urls: PurchaseLink[];
+    image_url: string;
+    submitted_by?: string;
+    approved: boolean;
+    likes: number;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface Spec {
     total_ram_mb: number;
     total_cpu_cores: number;
@@ -46,6 +63,7 @@ export interface Spec {
     rationale: string;
     estimated_cost_min: number;
     estimated_cost_max: number;
+    hardware_matches?: CatalogComponent[];
 }
 
 export interface ServiceInsight {

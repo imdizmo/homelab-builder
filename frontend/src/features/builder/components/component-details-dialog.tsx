@@ -21,7 +21,6 @@ export function ComponentDetailsDialog({ open, onOpenChange, onConfirm, initialT
     const [spec, setSpec] = useState<HardwareSpec>(initialDetails || {})
 
     // Split states for units and CPU
-    const [cpuModel, setCpuModel] = useState("")
     const [cpuCores, setCpuCores] = useState("")
     const [ramValue, setRamValue] = useState("")
     const [ramUnit, setRamUnit] = useState("GB")
@@ -44,7 +43,6 @@ export function ComponentDetailsDialog({ open, onOpenChange, onConfirm, initialT
             setModel(initialDetails?.model || "")
             setSpec(initialDetails || {})
 
-            setCpuModel(initialDetails?.cpu?.toString() || "")
             setCpuCores(initialDetails?.cpu_cores?.toString() || "")
 
             const [rVal, rUnit] = parseValueUnit(initialDetails?.ram?.toString())
@@ -61,11 +59,22 @@ export function ComponentDetailsDialog({ open, onOpenChange, onConfirm, initialT
     const handleConfirm = () => {
         const finalSpec: HardwareSpec = { ...spec, model }
         
-        if (cpuModel) finalSpec.cpu = cpuModel
-        if (cpuCores) finalSpec.cpu_cores = parseInt(cpuCores, 10)
+        // Output cores to `cpu` attribute since that is the new standard
+        if (cpuCores) finalSpec.cpu = parseInt(cpuCores, 10)
         
-        if (ramValue) finalSpec.ram = `${ramValue}${ramUnit}`
-        if (storageValue) finalSpec.storage = `${storageValue}${storageUnit}`
+        if (ramValue) {
+            const r = parseFloat(ramValue)
+            if (!isNaN(r)) {
+                finalSpec.ram = ramUnit === 'TB' ? r * 1000 : (ramUnit === 'MB' ? r / 1000 : r)
+            }
+        }
+
+        if (storageValue) {
+            const s = parseFloat(storageValue)
+            if (!isNaN(s)) {
+                finalSpec.storage = storageUnit === 'TB' ? s * 1000 : s
+            }
+        }
 
         onConfirm({
             name: name || `New ${initialType}`,
@@ -115,17 +124,7 @@ export function ComponentDetailsDialog({ open, onOpenChange, onConfirm, initialT
                     {['server', 'pc', 'minipc', 'sbc'].includes(initialType) && (
                         <>
                             <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="cpu" className="text-right">CPU Model</Label>
-                                <Input
-                                    id="cpu"
-                                    value={cpuModel}
-                                    onChange={(e) => setCpuModel(e.target.value)}
-                                    className="col-span-3"
-                                    placeholder="e.g. i7-13700K"
-                                />
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="cpu_cores" className="text-right">Cores</Label>
+                                <Label htmlFor="cpu_cores" className="text-right">CPU Cores</Label>
                                 <Input
                                     id="cpu_cores"
                                     type="number"

@@ -11,6 +11,15 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
 
     if (!res.ok) {
+        if (res.status === 401) {
+            // Token expired or invalid
+            localStorage.removeItem('auth_token');
+            // Only redirect if we're not already on the login page or checking /me
+            if (window.location.pathname !== '/login' && path !== '/auth/me') {
+                window.location.href = '/login';
+            }
+        }
+
         const error = await res.json().catch(() => ({ error: 'Request failed' }));
         throw new Error(error.error || `HTTP ${res.status}`);
     }

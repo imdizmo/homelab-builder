@@ -17,6 +17,7 @@ import { HardwareToolbox } from './hardware-toolbox';
 import { HardwareNode as HardwareNodeComponent } from './hardware-node';
 import { NodePropertiesPanel } from './node-properties-panel';
 import { ComponentDetailsDialog } from './component-details-dialog';
+import { LiveResourceDashboard } from './live-resource-dashboard';
 import { Button } from '../../../components/ui/button';
 import { Wand2, Menu, Save, Folder, Download, LogOut } from 'lucide-react';
 import type { HardwareType, HardwareNode } from '../../../types';
@@ -383,6 +384,8 @@ function Flow() {
             <HardwareToolbox />
 
             <div className="flex-1 h-full relative" ref={reactFlowWrapper}>
+                <LiveResourceDashboard />
+                
                 <ReactFlow
                     nodes={nodes}
                     edges={edges}

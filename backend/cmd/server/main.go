@@ -87,13 +87,14 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 		hardwareHandler := handlers.NewHardwareHandler(hardwareService)
 		_ = services.NewAnalyticsService(db) // available for future handler integration
 
-		// Auth routes (public)
+		// Auth routes (public & protected user)
 		auth := router.Group("/auth")
 		{
 			// Apply rate limiting to login
 			auth.POST("/google", middleware.RateLimitMiddleware(rateLimiter), authHandler.GoogleLogin)
 			auth.POST("/dev", authHandler.DevLogin) // Backdoor for local development
 			auth.GET("/me", middleware.AuthMiddleware(authService), authHandler.GetCurrentUser)
+			auth.PUT("/preferences", middleware.AuthMiddleware(authService), authHandler.UpdatePreferences)
 		}
 
 		// Public API routes
@@ -138,6 +139,7 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 			protected.GET("/builds/:id", buildHandler.Get)
 			protected.PUT("/builds/:id", buildHandler.Update)
 			protected.DELETE("/builds/:id", buildHandler.Delete)
+			protected.POST("/builds/:id/duplicate", buildHandler.Duplicate)
 			protected.POST("/builds/:id/calculate-network", buildHandler.CalculateNetwork)
 			protected.POST("/builds/:id/generate-config", configHandler.GenerateConfig)
 		}

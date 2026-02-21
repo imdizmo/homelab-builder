@@ -39,6 +39,7 @@ export function useAuth() {
         setLoading(true);
         try {
             const data = await api.googleLogin(credential);
+            localStorage.setItem('auth_token', data.token); // Crucial fix for token persistence
             setUser(data.user);
             // toast({ title: "Logged in", description: `Welcome back, ${data.user.name}` });
             window.location.reload(); // Reload to refresh all data/states dependent on auth

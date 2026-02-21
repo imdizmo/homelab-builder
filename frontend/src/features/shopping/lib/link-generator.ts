@@ -1,4 +1,3 @@
-
 export type ShoppingLocale = 'en-US' | 'pl-PL';
 
 export interface StoreLink {
@@ -6,13 +5,22 @@ export interface StoreLink {
     isMock: boolean;
 }
 
+// Replace these with actual affiliate codes in production
+const AFFILIATE_CODES = {
+    Amazon: '&tag=homelabbuilder-20',
+    AmazonPL: '&tag=homelabbuilderpl-21',
+    Allegro: '&bi_s=homelabbuilder&bi_m=search',
+    eBay: '&mkcid=1&mkrid=711-53200-19255-0&campid=5338900000',
+};
+
 const BASE_URLS = {
     'en-US': {
-        Amazon: 'https://www.amazon.de/s?k=',
+        Amazon: 'https://www.amazon.com/s?k=',
         eBay: 'https://www.ebay.com/sch/i.html?_nkw=',
     },
     'pl-PL': {
         Allegro: 'https://allegro.pl/listing?string=',
+        OLX: 'https://www.olx.pl/oferty/q-',
         AmazonPL: 'https://www.amazon.pl/s?k=',
         XKom: 'https://www.x-kom.pl/szukaj?q=',
     }
@@ -24,21 +32,18 @@ export const linkGenerator = {
         let url = '#';
 
         if (locale === 'pl-PL') {
-            if (store === 'Allegro') url = `${BASE_URLS['pl-PL'].Allegro}${q}`;
-            else if (store === 'Amazon') url = `${BASE_URLS['pl-PL'].AmazonPL}${q}`;
+            if (store.includes('Allegro')) url = `${BASE_URLS['pl-PL'].Allegro}${q}${AFFILIATE_CODES.Allegro}`;
+            else if (store.includes('Amazon')) url = `${BASE_URLS['pl-PL'].AmazonPL}${q}${AFFILIATE_CODES.AmazonPL}`;
             else if (store === 'x-kom') url = `${BASE_URLS['pl-PL'].XKom}${q}`;
-            else if (store.startsWith('Allegro')) url = `${BASE_URLS['pl-PL'].Allegro}${q}`; // Allegro (Used) etc.
+            else if (store.includes('OLX')) url = `${BASE_URLS['pl-PL'].OLX}${q}/`;
         } else {
-            if (store === 'Amazon') url = `${BASE_URLS['en-US'].Amazon}${q}`;
-            else if (store === 'eBay') url = `${BASE_URLS['en-US'].eBay}${q}`;
+            if (store.includes('Amazon')) url = `${BASE_URLS['en-US'].Amazon}${q}${AFFILIATE_CODES.Amazon}`;
+            else if (store.includes('eBay')) url = `${BASE_URLS['en-US'].eBay}${q}${AFFILIATE_CODES.eBay}`;
         }
-
-        // Fallback for cross-locale (e.g. asking for Allegro in US mode?) 
-        // Logic in generator.ts handles which stores are asked for.
 
         return {
             url,
-            isMock: true // We are just searching, not linking to specific item ID yet
+            isMock: false
         };
     }
 };

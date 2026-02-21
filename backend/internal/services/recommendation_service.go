@@ -1,9 +1,12 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/Butterski/homelab-builder/backend/internal/models"
@@ -26,16 +29,17 @@ type RecommendationRequest struct {
 }
 
 type Spec struct {
-	TotalRAMMB        int     `json:"total_ram_mb"`
-	TotalCPUCores     float32 `json:"total_cpu_cores"`
-	TotalStorageGB    int     `json:"total_storage_gb"`
-	CPUSuggestion     string  `json:"cpu_suggestion"`
-	RAMSuggestion     string  `json:"ram_suggestion"`
-	StorageSuggestion string  `json:"storage_suggestion"`
-	NetworkSuggestion string  `json:"network_suggestion"`
-	Rationale         string  `json:"rationale"`
-	EstimatedCostMin  int     `json:"estimated_cost_min"`
-	EstimatedCostMax  int     `json:"estimated_cost_max"`
+	TotalRAMMB        int                        `json:"total_ram_mb"`
+	TotalCPUCores     float32                    `json:"total_cpu_cores"`
+	TotalStorageGB    int                        `json:"total_storage_gb"`
+	CPUSuggestion     string                     `json:"cpu_suggestion"`
+	RAMSuggestion     string                     `json:"ram_suggestion"`
+	StorageSuggestion string                     `json:"storage_suggestion"`
+	NetworkSuggestion string                     `json:"network_suggestion"`
+	Rationale         string                     `json:"rationale"`
+	EstimatedCostMin  int                        `json:"estimated_cost_min"`
+	EstimatedCostMax  int                        `json:"estimated_cost_max"`
+	HardwareMatches   []models.HardwareComponent `json:"hardware_matches"`
 }
 
 type ServiceInsight struct {
@@ -131,15 +135,19 @@ func (s *RecommendationService) Generate(req RecommendationRequest) (*Recommenda
 	minStorage += sysOverheadStorage
 	recStorage += sysOverheadStorage
 
-	// Generate three tiers
 	minimalSpec := buildSpec(minRAM, minCPU, minStorage, "minimal")
+	minimalSpec.HardwareMatches = s.matchHardware(minRAM, minCPU, minStorage)
+
 	recommendedSpec := buildSpec(recRAM, recCPU, recStorage, "recommended")
+	recommendedSpec.HardwareMatches = s.matchHardware(recRAM, recCPU, recStorage)
+
 	optimalSpec := buildSpec(
 		int(float64(recRAM)*1.5),
 		recCPU*1.5,
 		int(float64(recStorage)*1.5),
 		"optimal",
 	)
+	optimalSpec.HardwareMatches = s.matchHardware(optimalSpec.TotalRAMMB, optimalSpec.TotalCPUCores, optimalSpec.TotalStorageGB)
 
 	// Build per-service insights
 	insights := buildInsights(svcs, svcRAMs, recRAM)
@@ -318,4 +326,153 @@ func (s *RecommendationService) SaveRecommendation(userID *uuid.UUID, spec Spec,
 	}
 
 	return &rec, nil
+}
+
+func (s *RecommendationService) matchHardware(ramMB int, cpuCores float32, storageGB int) []models.HardwareComponent {
+	var raw []models.HardwareComponent
+	// Only check compute / main categories
+	s.db.Where("category IN ?", []string{"server", "minipc", "nas", "sbc"}).
+		Where("approved = ?", true).
+		Find(&raw)
+
+	type scored struct {
+		component models.HardwareComponent
+		score     float64
+	}
+
+	var scoredList []scored
+
+	for _, c := range raw {
+		var specMap map[string]interface{}
+		if err := json.Unmarshal(c.Spec, &specMap); err != nil {
+			continue
+		}
+
+		cRam := extractGB(specMap["ram"]) * 1024
+		if cRam == 0 {
+			cRam = extractGB(specMap["capacity"]) * 1024
+		}
+		cCPU := extractCores(specMap["cpu"])
+
+		// log extraction
+		fmt.Printf("Parsed %s %s - RAM: %d, CPU: %.1f from Spec: %+v\n", c.Brand, c.Model, cRam, cCPU, specMap)
+
+		// Basic eligibility: Must have at least 50% of required RAM and CPU to even be considered
+		if float64(cRam) < float64(ramMB)*0.5 && ramMB > 0 {
+			fmt.Printf("Skipped %s %s - RAM too low (%d < %f)\n", c.Brand, c.Model, cRam, float64(ramMB)*0.5)
+			continue
+		}
+		if cCPU < cpuCores*0.5 && cpuCores > 0 && cCPU != 0 {
+			fmt.Printf("Skipped %s %s - CPU too low (%f < %f)\n", c.Brand, c.Model, cCPU, cpuCores*0.5)
+			continue
+		}
+
+		score := 0.0
+
+		// Closer RAM is better. If it has less RAM, big penalty. If it has somewhat more, small penalty.
+		if cRam < ramMB {
+			score += float64(ramMB-cRam) * 0.5
+		} else {
+			score += float64(cRam-ramMB) * 0.1
+		}
+
+		// CPU Cores proximity
+		if cCPU < cpuCores {
+			score += float64(cpuCores-cCPU) * 500
+		} else {
+			score += float64(cCPU-cpuCores) * 100
+		}
+
+		// Prefer cheaper components if they satisfy needs
+		score += c.PriceEst * 1.0
+
+		scoredList = append(scoredList, scored{component: c, score: score})
+	}
+
+	sort.Slice(scoredList, func(i, j int) bool {
+		return scoredList[i].score < scoredList[j].score
+	})
+
+	var matches []models.HardwareComponent
+	for i := 0; i < len(scoredList) && i < 3; i++ {
+		matches = append(matches, scoredList[i].component)
+	}
+	return matches
+}
+
+func extractGB(val interface{}) int {
+	if val == nil {
+		return 0
+	}
+	str := strings.ToUpper(fmt.Sprintf("%v", val))
+
+	reGB := regexp.MustCompile(`(\d+)\s*GB`)
+	if m := reGB.FindStringSubmatch(str); len(m) > 1 {
+		v, _ := strconv.Atoi(m[1])
+		return v
+	}
+	reTB := regexp.MustCompile(`(\d+)\s*TB`)
+	if m := reTB.FindStringSubmatch(str); len(m) > 1 {
+		v, _ := strconv.Atoi(m[1])
+		return v * 1024
+	}
+	reNum := regexp.MustCompile(`^(\d+)$`)
+	if m := reNum.FindStringSubmatch(str); len(m) > 1 {
+		v, _ := strconv.Atoi(m[1])
+		return v
+	}
+	return 0
+}
+
+func extractCores(val interface{}) float32 {
+	if val == nil {
+		return 0
+	}
+	str := strings.ToLower(fmt.Sprintf("%v", val))
+
+	reCore := regexp.MustCompile(`(\d+)\s*-?core`)
+	if m := reCore.FindStringSubmatch(str); len(m) > 1 {
+		v, _ := strconv.ParseFloat(m[1], 32)
+		return float32(v)
+	}
+	if strings.Contains(str, "quad-core") || strings.Contains(str, "quad") {
+		return 4
+	}
+	if strings.Contains(str, "dual-core") || strings.Contains(str, "dual") {
+		return 2
+	}
+	if strings.Contains(str, "octa-core") || strings.Contains(str, "octa") {
+		return 8
+	}
+
+	// Specific fallback for server CPUs
+	if strings.Contains(str, "4314") {
+		return 16
+	}
+	if strings.Contains(str, "4310") {
+		return 12
+	}
+	if strings.Contains(str, "4208") {
+		return 8
+	}
+	if strings.Contains(str, "2680v4") || strings.Contains(str, "2680 v4") {
+		if strings.Contains(str, "2x") {
+			return 28
+		}
+		return 14
+	}
+	if strings.Contains(str, "2660v2") || strings.Contains(str, "2660 v2") {
+		if strings.Contains(str, "2x") {
+			return 20
+		}
+		return 10
+	}
+	if strings.Contains(str, "2640v2") || strings.Contains(str, "2640 v2") {
+		if strings.Contains(str, "2x") {
+			return 16
+		}
+		return 8
+	}
+
+	return 0
 }

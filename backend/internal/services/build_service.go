@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/Butterski/homelab-builder/backend/internal/models"
 	"github.com/google/uuid"
@@ -309,4 +310,125 @@ func (s *BuildService) Delete(buildID uuid.UUID, userID uuid.UUID) error {
 		return errors.New("build not found or unauthorized")
 	}
 	return nil
+}
+
+func (s *BuildService) Duplicate(buildID uuid.UUID, userID uuid.UUID) (*models.Build, error) {
+	// First fetch the full build that we want to copy
+	build, err := s.GetByID(buildID)
+	if err != nil {
+		return nil, err
+	}
+
+	if build.UserID != userID {
+		return nil, errors.New("unauthorized to duplicate this build")
+	}
+
+	// Create a new independent copy with a new UUID
+	newBuild := &models.Build{
+		UserID:    userID,
+		Name:      build.Name + " (Copy)",
+		Data:      build.Data, // Legacy JSON blob
+		Thumbnail: build.Thumbnail,
+	}
+
+	// Start a transaction to insert the new build and sync its data
+	err = s.db.Transaction(func(tx *gorm.DB) error {
+		// Insert the new base build row to get its ID
+		if err := tx.Create(newBuild).Error; err != nil {
+			return err
+		}
+
+		// Because JSON Data blob still contains the old UUIDs for nodes/edges,
+		// we must call syncDataFromJSON. However, syncDataFromJSON attempts to reuse
+		// node IDs if they exist. We need it to force new UUIDs for everything.
+		// A simple trick: if we just call syncDataFromJSON on it right now,
+		// it might collide with the old nodes because the raw "id" string in the JSON is identical.
+		// To fix this, we clear out the "id" fields from the JSON before syncing.
+
+		var rawData map[string]interface{}
+		if err := json.Unmarshal([]byte(newBuild.Data), &rawData); err == nil {
+			// Clear IDs in hardwareNodes
+			if nodes, ok := rawData["hardwareNodes"].([]interface{}); ok {
+				for _, n := range nodes {
+					if nodeMap, ok := n.(map[string]interface{}); ok {
+						delete(nodeMap, "id")
+						if vms, ok := nodeMap["vms"].([]interface{}); ok {
+							for _, v := range vms {
+								if vmMap, ok := v.(map[string]interface{}); ok {
+									delete(vmMap, "id")
+								}
+							}
+						}
+					}
+				}
+			}
+			// (Edges don't store their own UUID in the Legacy JSON, they just reference Source/Target strings.
+			// The reference strings must stay intact so they map to each other, but syncMap will generate NEW UUIDs
+			// if we pass it custom logic.
+			// Wait, syncDataFromJSON actually uses uuid.Parse() on the node IDs. If the ID is valid it reuses it.
+			// This means we CANNOT reuse syncDataFromJSON easily for duplication unless we rewrite the JSON strings first.
+		}
+
+		// A much safer approach for Duplication:
+		// 1. Generate new UUIDs for every node
+		// 2. String replace the old UUIDs with the new UUIDs in the raw JSON string
+		// 3. Save the modified JSON string
+		// 4. Call syncDataFromJSON (which will now parse the NEW UUIDs and insert them relative to the new buildID)
+
+		idMap := make(map[string]string)
+
+		// Map node and VM IDs
+		var data LegacyBuildData
+		if err := json.Unmarshal([]byte(build.Data), &data); err == nil {
+			for _, n := range data.HardwareNodes {
+				idMap[n.ID] = uuid.New().String()
+				for _, vm := range n.VMs {
+					idMap[vm.ID] = uuid.New().String()
+				}
+			}
+			for _, n := range data.Nodes {
+				if idStr, ok := n["id"].(string); ok {
+					if _, exists := idMap[idStr]; !exists {
+						idMap[idStr] = uuid.New().String()
+					}
+				}
+			}
+		}
+
+		// Regex/String replace the old IDs with new IDs in the JSON string
+		newDataStr := build.Data
+		for oldID, newID := range idMap {
+			// Basic string replacement. Safe since UUIDs are unique and won't overlap with other text
+			newDataStr = strings.ReplaceAll(newDataStr, oldID, newID)
+		}
+
+		newBuild.Data = newDataStr
+
+		// Update the build row with the rewritten JSON
+		if err := tx.Save(newBuild).Error; err != nil {
+			return err
+		}
+
+		// Now we can safely sync relations for the new build, because its JSON has fresh unique UUIDs
+		updatedData, err := s.syncDataFromJSON(tx, newBuild)
+		if err != nil {
+			return err
+		}
+
+		if updatedData != nil {
+			finalJSON, err := json.Marshal(updatedData)
+			if err == nil {
+				newBuild.Data = string(finalJSON)
+				tx.Save(newBuild)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return newBuild, nil
 }

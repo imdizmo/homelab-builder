@@ -429,3 +429,78 @@ func TestUpdate_WithVMFails(t *testing.T) {
 		t.Fatalf("Update with VM failed: %v", err)
 	}
 }
+
+// ─── Duplicate ─────────────────────────────────────────────────────────────────────────
+
+func TestDuplicate_CreatesIndependentCopy(t *testing.T) {
+	tx := testTx(t)
+	svc := NewBuildService(tx)
+	user := models.User{Email: uuid.NewString() + "@t.com", Name: "T", GoogleID: uuid.NewString()}
+	tx.Create(&user)
+
+	// Create a build with a server and a VM
+	data := `{
+		"hardwareNodes": [
+			{"id":"n1","type":"server","name":"Host","x":0,"y":0,"vms":[{"id":"v1","name":"VM1","type":"container"}]}
+		],
+		"nodes": [{"id":"n1"}],
+		"edges": []
+	}`
+
+	original, err := svc.Create(user.ID, "Original Source", data, "")
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	// Trigger generation of relational nodes via GetByID
+	originalLoaded, err := svc.GetByID(original.ID)
+	if err != nil {
+		t.Fatalf("GetByID failed: %v", err)
+	}
+
+	duplicated, err := svc.Duplicate(original.ID, user.ID)
+	if err != nil {
+		t.Fatalf("Duplicate failed: %v", err)
+	}
+
+	if duplicated.ID == original.ID {
+		t.Errorf("Expected duplicated ID to be different from original ID")
+	}
+	if duplicated.Name != "Original Source (Copy)" {
+		t.Errorf("Expected duplicated name to be 'Original Source (Copy)', got '%s'", duplicated.Name)
+	}
+	if duplicated.UserID != user.ID {
+		t.Errorf("Expected duplicated user ID to be same as owner")
+	}
+
+	// Fetch full duplicated item to pull relational DB properties and confirm they were cloned
+	dupLoaded, err := svc.GetByID(duplicated.ID)
+	if err != nil {
+		t.Fatalf("GetByID (duplicated) failed: %v", err)
+	}
+
+	if len(dupLoaded.Nodes) != len(originalLoaded.Nodes) {
+		t.Errorf("Expected duplicated build to have %d nodes, got %d", len(originalLoaded.Nodes), len(dupLoaded.Nodes))
+	}
+	if len(dupLoaded.Nodes) > 0 {
+		if dupLoaded.Nodes[0].ID == originalLoaded.Nodes[0].ID {
+			t.Errorf("Expected duplicated node ID to be fundamentally unique from original node. Found identical relational ID: %s", dupLoaded.Nodes[0].ID)
+		}
+	}
+}
+
+func TestDuplicate_Unauthorized(t *testing.T) {
+	tx := testTx(t)
+	svc := NewBuildService(tx)
+	owner := models.User{Email: uuid.NewString() + "@t.com", Name: "Owner", GoogleID: uuid.NewString()}
+	attacker := models.User{Email: uuid.NewString() + "@t.com", Name: "Attacker", GoogleID: uuid.NewString()}
+	tx.Create(&owner)
+	tx.Create(&attacker)
+
+	build, _ := svc.Create(owner.ID, "Private Source", `{"hardwareNodes":[]}`, "")
+
+	_, err := svc.Duplicate(build.ID, attacker.ID)
+	if err == nil {
+		t.Error("expected error duplicating another user's build, got nil")
+	}
+}

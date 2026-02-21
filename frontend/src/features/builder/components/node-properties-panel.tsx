@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui
 import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Label } from "../../../components/ui/label"
-import { X, Trash2, AlertCircle, Wand2 } from "lucide-react"
+import { X, Trash2, AlertCircle, Wand2, AlertTriangle } from "lucide-react"
 import { VMManager } from "./vm-manager"
 import { InternalComponentManager } from "./internal-component-manager"
 
@@ -23,6 +23,10 @@ export function NodePropertiesPanel() {
     const [ram, setRam] = useState("")
     const [storage, setStorage] = useState("")
     const [ports, setPorts] = useState("")
+    
+    const [ramUnit, setRamUnit] = useState<"GB" | "TB">("GB")
+    const [storageUnit, setStorageUnit] = useState<"GB" | "TB">("GB")
+
     const [errors, setErrors] = useState<{ip?: string, mask?: string, gateway?: string}>({})
 
     const selectedNode = hardwareNodes.find(n => n.id === selectedNodeId)
@@ -37,8 +41,37 @@ export function NodePropertiesPanel() {
             
             if (model !== (selectedNode.details?.model || "")) setModel(selectedNode.details?.model || "")
             if (cpu !== (selectedNode.details?.cpu?.toString() || "")) setCpu(selectedNode.details?.cpu?.toString() || "")
-            if (ram !== (selectedNode.details?.ram?.toString() || "")) setRam(selectedNode.details?.ram?.toString() || "")
-            if (storage !== (selectedNode.details?.storage?.toString() || "")) setStorage(selectedNode.details?.storage?.toString() || "")
+            
+            // Re-hydrate RAM with TB format extraction
+            if (selectedNode.details?.ram) {
+                const r = Number(selectedNode.details.ram);
+                if (r >= 1000 && r % 1000 === 0) {
+                    setRam(String(r / 1000));
+                    setRamUnit("TB");
+                } else {
+                    setRam(String(r));
+                    setRamUnit("GB");
+                }
+            } else {
+                setRam("");
+                setRamUnit("GB");
+            }
+            
+            // Re-hydrate Storage with TB format extraction
+            if (selectedNode.details?.storage) {
+                const s = Number(selectedNode.details.storage);
+                if (s >= 1000 && s % 1000 === 0) {
+                    setStorage(String(s / 1000));
+                    setStorageUnit("TB");
+                } else {
+                    setStorage(String(s));
+                    setStorageUnit("GB");
+                }
+            } else {
+                setStorage("");
+                setStorageUnit("GB");
+            }
+            
             if (ports !== (selectedNode.details?.ports?.toString() || "")) setPorts(selectedNode.details?.ports?.toString() || "")
             
             setErrors({})
@@ -52,11 +85,14 @@ export function NodePropertiesPanel() {
         const timer = setTimeout(() => {
             // Validate and Save
             if (validate()) {
-                // Convert specs to numbers if they are present
-                const cpuVal = cpu ? Number(cpu) : undefined
-                const ramVal = ram ? Number(ram) : undefined
-                const storageVal = storage ? Number(storage) : undefined
-                const portsVal = ports ? Number(ports) : undefined
+                const parseNum = (val: string) => {
+                    if (!val || val.trim() === "") return undefined;
+                    const num = Number(val);
+                    return isNaN(num) ? undefined : num;
+                }
+
+                const rVal = parseNum(ram);
+                const sVal = parseNum(storage);
 
                 updateHardware(selectedNode.id, { 
                     name, 
@@ -66,17 +102,17 @@ export function NodePropertiesPanel() {
                     details: { 
                         ...selectedNode.details, 
                         model, 
-                        cpu: cpuVal, 
-                        ram: ramVal, 
-                        storage: storageVal,
-                        ports: portsVal
+                        cpu: parseNum(cpu), 
+                        ram: rVal ? rVal * (ramUnit === 'TB' ? 1000 : 1) : undefined, 
+                        storage: sVal ? sVal * (storageUnit === 'TB' ? 1000 : 1) : undefined,
+                        ports: parseNum(ports)
                     }
                 })
             }
         }, 500) // 500ms debounce
 
         return () => clearTimeout(timer)
-    }, [name, ip, mask, gateway, model, cpu, ram, storage, ports])
+    }, [name, ip, mask, gateway, model, cpu, ram, ramUnit, storage, storageUnit, ports])
 
     if (!selectedNode) return null
 
@@ -103,6 +139,22 @@ export function NodePropertiesPanel() {
     const isRouter = selectedNode.type === 'router'
     const supportsVMs = ['server', 'pc', 'nas', 'minipc', 'sbc'].includes(selectedNode.type)
     const isNetworked = !NON_NETWORK_TYPES.includes(selectedNode.type)
+
+    // Resource limit calculations
+    let usedCpu = 0;
+    let usedRam = 0;
+    (selectedNode.vms || []).forEach(vm => {
+        usedCpu += vm.cpu_cores || 1;
+        usedRam += vm.ram_mb || 512;
+    });
+
+    const totalCpu = Number(selectedNode.details?.cpu) || 0;
+    const totalRamGB = Number(selectedNode.details?.ram) || 0;
+    const totalRamMB = totalRamGB < 1000 ? totalRamGB * 1024 : totalRamGB;
+    
+    const cpuWarning = totalCpu > 0 && usedCpu > totalCpu;
+    const ramWarning = totalRamMB > 0 && usedRam > totalRamMB;
+    const hasWarning = cpuWarning || ramWarning;
 
     return (
         <Card className="absolute top-4 right-4 w-80 shadow-xl z-10 border-l animate-in slide-in-from-right-10 bg-background/95 backdrop-blur max-h-[calc(100vh-6rem)] flex flex-col">
@@ -241,32 +293,52 @@ export function NodePropertiesPanel() {
                     {['server', 'pc', 'minipc', 'sbc', 'nas', 'gpu'].includes(selectedNode.type) && (
                         <div className="space-y-1">
                             <Label htmlFor="ram" className="text-xs text-muted-foreground">
-                                {selectedNode.type === 'gpu' ? 'VRAM (GB)' : 'RAM (GB)'}
+                                {selectedNode.type === 'gpu' ? 'VRAM' : 'RAM'} capacity
                             </Label>
-                            <Input
-                                id="ram"
-                                type="number"
-                                min="1"
-                                value={ram}
-                                onChange={(e) => setRam(e.target.value)}
-                                className="h-8 text-xs"
-                                placeholder="e.g. 16"
-                            />
+                            <div className="flex gap-1">
+                                <Input
+                                    id="ram"
+                                    type="number"
+                                    min="1"
+                                    value={ram}
+                                    onChange={(e) => setRam(e.target.value)}
+                                    className="h-8 text-xs flex-1"
+                                    placeholder="e.g. 16"
+                                />
+                                <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    className="h-8 px-2 w-[42px] font-mono text-xs cursor-pointer bg-muted/30 shrink-0"
+                                    onClick={() => setRamUnit(prev => prev === 'GB' ? 'TB' : 'GB')}
+                                >
+                                    {ramUnit}
+                                </Button>
+                            </div>
                         </div>
                     )}
 
                     {['server', 'pc', 'minipc', 'sbc', 'nas', 'disk'].includes(selectedNode.type) && (
                         <div className="space-y-1">
-                            <Label htmlFor="storage" className="text-xs text-muted-foreground">Storage (GB)</Label>
-                            <Input
-                                id="storage"
-                                type="number"
-                                min="1"
-                                value={storage}
-                                onChange={(e) => setStorage(e.target.value)}
-                                className="h-8 text-xs"
-                                placeholder="e.g. 512"
-                            />
+                            <Label htmlFor="storage" className="text-xs text-muted-foreground">Storage capacity</Label>
+                            <div className="flex gap-1">
+                                <Input
+                                    id="storage"
+                                    type="number"
+                                    min="1"
+                                    value={storage}
+                                    onChange={(e) => setStorage(e.target.value)}
+                                    className="h-8 text-xs flex-1"
+                                    placeholder="e.g. 512"
+                                />
+                                <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    className="h-8 px-2 w-[42px] font-mono text-xs cursor-pointer bg-muted/30 shrink-0"
+                                    onClick={() => setStorageUnit(prev => prev === 'GB' ? 'TB' : 'GB')}
+                                >
+                                    {storageUnit}
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -277,6 +349,19 @@ export function NodePropertiesPanel() {
                 {/* VM Manager (servers, PCs, NAS) */}
                 {supportsVMs && (
                     <div className="border-t pt-4">
+                        {hasWarning && (
+                            <div className="mb-4 p-2.5 bg-destructive/10 border border-destructive/20 rounded-md text-xs text-destructive flex items-start gap-2 animate-in fade-in">
+                                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="font-semibold mb-0.5">Resource Warning</p>
+                                    <p className="opacity-90 leading-relaxed">
+                                        This node is over-provisioned.
+                                        {cpuWarning && ` Used CPU: ${usedCpu}/${totalCpu}.`}
+                                        {ramWarning && ` Used RAM: ${Math.round(usedRam/1024)}GB/${Math.round(totalRamMB/1024)}GB.`}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                         <VMManager nodeId={selectedNode.id} />
                     </div>
                 )}

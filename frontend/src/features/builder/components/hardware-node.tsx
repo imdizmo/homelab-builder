@@ -2,7 +2,7 @@ import { memo, useEffect } from 'react'
 import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflow/react'
 import {
     Server, Router, CircuitBoard, HardDrive, Wifi, Monitor,
-    Box, Cpu, Container, Layers, Plug, Battery, HardDrive as DiskIcon
+    Box, Cpu, Container, Layers, Plug, Battery, HardDrive as DiskIcon, AlertTriangle
 } from 'lucide-react'
 import { Card } from '../../../components/ui/card'
 import { cn } from '../../../lib/utils'
@@ -117,9 +117,25 @@ export const HardwareNode = memo(({ id, data, selected }: NodeProps) => {
         ? (Number(nodeData.details?.ports) || 4) 
         : 1;
 
+    // Resource calculations
+    let usedCpu = 0;
+    let usedRam = 0;
+    vms.forEach(vm => {
+        usedCpu += vm.cpu_cores || 1;
+        usedRam += vm.ram_mb || 512;
+    });
+
+    const totalCpu = Number(nodeData.details?.cpu) || 0;
+    const totalRamGB = Number(nodeData.details?.ram) || 0;
+    const totalRamMB = totalRamGB < 1000 ? totalRamGB * 1024 : totalRamGB;
+    
+    const cpuWarning = totalCpu > 0 && usedCpu > totalCpu;
+    const ramWarning = totalRamMB > 0 && usedRam > totalRamMB;
+    const hasWarning = cpuWarning || ramWarning;
+
     useEffect(() => {
         updateNodeInternals(id)
-    }, [id, numPorts, updateNodeInternals, hasVMs, hasComponents])
+    }, [id, numPorts, updateNodeInternals, hasVMs, hasComponents, hasWarning])
 
     // Container pool range hint
     const containerRangeHint = isCompute && nodeData.ip
@@ -141,6 +157,7 @@ export const HardwareNode = memo(({ id, data, selected }: NodeProps) => {
                     'transition-all duration-200 border-2 overflow-hidden shadow-sm',
                     (hasVMs || hasComponents) ? 'w-56' : 'w-48',
                     cfg.border, cfg.bg,
+                    hasWarning ? 'border-destructive/60' : '',
                     selected ? 'ring-2 ring-primary shadow-lg scale-105' : 'hover:border-primary/50'
                 )}
                 style={dynamicMinWidth > 192 ? { minWidth: `${dynamicMinWidth}px` } : undefined}
@@ -148,12 +165,19 @@ export const HardwareNode = memo(({ id, data, selected }: NodeProps) => {
                 {/* Header */}
                 <div className={cn(
                     'px-3 py-2 flex items-center gap-2 border-b bg-background/50 backdrop-blur-sm',
-                    selected ? 'bg-primary/5' : ''
+                    hasWarning ? 'bg-destructive/10' : (selected ? 'bg-primary/5' : '')
                 )}>
                     <Icon className={cn('h-4 w-4 shrink-0', cfg.iconColor)} />
                     <span className="font-semibold text-sm truncate flex-1" title={nodeData.label}>
                         {nodeData.label}
                     </span>
+                    
+                    {hasWarning && (
+                        <div title={`Resource limit exceeded!\nCPU: ${usedCpu}/${totalCpu}\nRAM: ${Math.round(usedRam/1024)}GB/${Math.round(totalRamMB/1024)}GB`}>
+                            <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0 animate-pulse cursor-help" />
+                        </div>
+                    )}
+
                     <span className="relative flex h-2 w-2 shrink-0">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
@@ -195,13 +219,23 @@ export const HardwareNode = memo(({ id, data, selected }: NodeProps) => {
                         {(nodeData.details?.cpu || nodeData.details?.ram || nodeData.details?.storage) && (
                             <div className="flex flex-wrap gap-1 pt-0.5">
                                 {nodeData.details.cpu && (
-                                    <span className="text-[9px] bg-muted/60 rounded px-1 py-0.5 truncate max-w-full" title={nodeData.details.cpu.toString()}>{nodeData.details.cpu}</span>
+                                    <span className="text-[9px] bg-muted/60 rounded px-1 py-0.5 truncate max-w-full" title={`${nodeData.details.cpu} Cores`}>
+                                        {nodeData.details.cpu} Core{Number(nodeData.details.cpu) !== 1 ? 's' : ''}
+                                    </span>
                                 )}
                                 {nodeData.details.ram && (
-                                    <span className="text-[9px] bg-muted/60 rounded px-1 py-0.5">{nodeData.details.ram} {nodeData.type === 'gpu' ? 'VRAM' : ''}</span>
+                                    <span className="text-[9px] bg-muted/60 rounded px-1 py-0.5 truncate max-w-full" title={`${nodeData.details.ram} GB RAM`}>
+                                        {Number(nodeData.details.ram) >= 1000 && Number(nodeData.details.ram) % 1000 === 0 
+                                            ? `${Number(nodeData.details.ram) / 1000}TB` 
+                                            : `${nodeData.details.ram}GB`} {nodeData.type === 'gpu' ? 'VRAM' : 'RAM'}
+                                    </span>
                                 )}
                                 {nodeData.details.storage && (
-                                    <span className="text-[9px] bg-muted/60 rounded px-1 py-0.5">{nodeData.details.storage}</span>
+                                    <span className="text-[9px] bg-muted/60 rounded px-1 py-0.5 truncate max-w-full" title={`${nodeData.details.storage} GB Storage`}>
+                                        {Number(nodeData.details.storage) >= 1000 && Number(nodeData.details.storage) % 1000 === 0
+                                            ? `${Number(nodeData.details.storage) / 1000}TB` 
+                                            : `${nodeData.details.storage}GB`} Disk
+                                    </span>
                                 )}
                             </div>
                         )}
