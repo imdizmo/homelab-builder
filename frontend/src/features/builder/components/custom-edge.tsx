@@ -4,6 +4,7 @@ import {
   EdgeLabelRenderer,
   getSmoothStepPath,
   useReactFlow,
+  useInternalNode,
   type EdgeProps,
 } from '@xyflow/react';
 import { Button } from '../../../components/ui/button';
@@ -23,6 +24,7 @@ import {
   SelectValue 
 } from "../../../components/ui/select";
 import { useBuilderStore } from '../store/builder-store';
+import { getEdgeParams } from './floating-edge-utils';
  
 const SPEED_COLORS: Record<string, string> = {
   '100 MbE': '#94a3b8',   // slate-400
@@ -35,6 +37,8 @@ const SPEED_COLORS: Record<string, string> = {
 
 export function CustomEdge({
   id,
+  source,
+  target,
   sourceX,
   sourceY,
   targetX,
@@ -49,13 +53,42 @@ export function CustomEdge({
   const { deleteElements } = useReactFlow();
   const updateEdge = useBuilderStore(s => s.updateEdge);
   const [isHovered, setIsHovered] = useState(false);
+  
+  const sourceNode = useInternalNode(source);
+  const targetNode = useInternalNode(target);
+
+  let sx = sourceX;
+  let sy = sourceY;
+  let tx = targetX;
+  let ty = targetY;
+  let sourcePos = sourcePosition;
+  let targetPos = targetPosition;
+
+  if (sourceNode && targetNode) {
+    const params = getEdgeParams(sourceNode, targetNode);
+    
+    // Only apply floating edge math if the node is NOT a switch or router
+    // This allows exact port assignment on network gear while computers float gracefully
+    if (sourceNode.data?.type !== 'switch' && sourceNode.data?.type !== 'router') {
+      sx = params.sx;
+      sy = params.sy;
+      sourcePos = params.sourcePos;
+    }
+    
+    if (targetNode.data?.type !== 'switch' && targetNode.data?.type !== 'router') {
+      tx = params.tx;
+      ty = params.ty;
+      targetPos = params.targetPos;
+    }
+  }
+
   const [edgePath, labelX, labelY] = getSmoothStepPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
+    sourceX: sx,
+    sourceY: sy,
+    sourcePosition: sourcePos,
+    targetX: tx,
+    targetY: ty,
+    targetPosition: targetPos,
     borderRadius: 15,
   });
  
