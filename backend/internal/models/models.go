@@ -211,8 +211,12 @@ type Edge struct {
 	ID           uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
 	BuildID      uuid.UUID `gorm:"type:uuid;not null;index" json:"build_id"`
 	SourceNodeID uuid.UUID `gorm:"type:uuid;not null" json:"source_node_id"`
+	SourceHandle string    `json:"source_handle,omitempty"`
 	TargetNodeID uuid.UUID `gorm:"type:uuid;not null" json:"target_node_id"`
+	TargetHandle string    `json:"target_handle,omitempty"`
 	Type         string    `gorm:"default:'ethernet'" json:"type"`
+	Speed        string    `gorm:"default:'1 GbE'" json:"speed"`
+	Subnet       string    `gorm:"default:''" json:"subnet"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 

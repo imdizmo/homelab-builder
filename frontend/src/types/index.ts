@@ -132,6 +132,8 @@ export interface HardwareSpec {
     price_est?: number
     currency?: string
     url?: string
+    dhcp_enabled?: boolean
+    dhcp_locked?: boolean
 }
 
 export type VMType = 'vm' | 'container' | 'lxc'

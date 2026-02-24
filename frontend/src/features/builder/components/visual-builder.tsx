@@ -116,7 +116,8 @@ function Flow() {
         getBuildData,
         currentBuildId,
         hardwareNodes,
-        projectName
+        projectName,
+        validateNetwork
     } = useBuilderStore();
 
     const { screenToFlowPosition, getIntersectingNodes } = useReactFlow();
@@ -154,12 +155,15 @@ function Flow() {
             });
             setSaveStatus('saved');
             lastSaveTime.current = Date.now();
+            
+            // Trigger automatic validation after the changes have been safely persisted
+            await validateNetwork();
         } catch (err) {
             console.error("Failed to save", err);
             setSaveStatus('error');
             toast.error("Failed to auto-save");
         }
-    }, [id, getBuildData, projectName]);
+    }, [id, getBuildData, projectName, validateNetwork]);
 
     // Auto-save trigger
     useEffect(() => {

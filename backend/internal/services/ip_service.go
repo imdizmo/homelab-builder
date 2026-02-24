@@ -39,9 +39,10 @@ func NewIPService(db *gorm.DB) *IPService {
 // ── hlbIPAM request/response DTOs ──────────────────────────────────────────
 
 type ipamRouter struct {
-	ID        string `json:"id"`
-	GatewayIP string `json:"gateway_ip,omitempty"`
-	Subnet    string `json:"subnet,omitempty"`
+	ID          string `json:"id"`
+	GatewayIP   string `json:"gateway_ip,omitempty"`
+	Subnet      string `json:"subnet,omitempty"`
+	DHCPEnabled bool   `json:"dhcp_enabled,omitempty"`
 }
 
 type ipamVM struct {
@@ -129,10 +130,22 @@ func (s *IPService) CalculateNetwork(buildID uuid.UUID) error {
 		for _, n := range nodes {
 			nid := n.ID.String()
 			if n.Type == "router" {
+				var details struct {
+					DHCPEnabled bool `json:"dhcp_enabled"`
+					DHCPLocked  bool `json:"dhcp_locked"`
+				}
+				_ = json.Unmarshal([]byte(n.Details), &details)
+
 				req.Routers = append(req.Routers, ipamRouter{
-					ID:        nid,
-					GatewayIP: n.IP,
+					ID:          nid,
+					GatewayIP:   n.IP,
+					DHCPEnabled: details.DHCPEnabled,
 				})
+			} else {
+				var details struct {
+					DHCPLocked bool `json:"dhcp_locked"`
+				}
+				_ = json.Unmarshal([]byte(n.Details), &details)
 			}
 
 			vms := make([]ipamVM, 0, len(n.VirtualMachines))
@@ -144,10 +157,19 @@ func (s *IPService) CalculateNetwork(buildID uuid.UUID) error {
 			}
 
 			existingIP := ""
+
+			// Extract DHCPLocked from node details
+			var details struct {
+				DHCPLocked bool `json:"dhcp_locked"`
+			}
+			_ = json.Unmarshal([]byte(n.Details), &details)
+
 			if nonNetworkTypes[n.Type] {
 				// Don't send existing IP for non-network types
 			} else if n.Type == "router" {
 				existingIP = n.IP // preserve router IPs as existing
+			} else if details.DHCPLocked {
+				existingIP = n.IP // preserve locked static IPs
 			}
 
 			req.Nodes = append(req.Nodes, ipamNode{
@@ -245,6 +267,88 @@ func (s *IPService) callIPAM(req ipamRequest) (*ipamResponse, error) {
 	}
 
 	return &result, nil
+}
+
+// ValidateNetwork sends the current topology to the hlbIPAM validate endpoint
+// and returns the raw validation response directly to the caller.
+func (s *IPService) ValidateNetwork(buildID uuid.UUID) (json.RawMessage, error) {
+	var nodes []models.Node
+	if err := s.db.Preload("VirtualMachines").Where("build_id = ?", buildID).Find(&nodes).Error; err != nil {
+		return nil, err
+	}
+
+	var edges []models.Edge
+	if err := s.db.Where("build_id = ?", buildID).Find(&edges).Error; err != nil {
+		return nil, err
+	}
+
+	adj := make(map[string][]string, len(nodes))
+	for _, e := range edges {
+		src := e.SourceNodeID.String()
+		tgt := e.TargetNodeID.String()
+		adj[src] = append(adj[src], tgt)
+		adj[tgt] = append(adj[tgt], src)
+	}
+
+	req := ipamRequest{
+		Routers: make([]ipamRouter, 0),
+		Nodes:   make([]ipamNode, 0, len(nodes)),
+	}
+
+	for _, n := range nodes {
+		nid := n.ID.String()
+		if n.Type == "router" {
+			var details struct {
+				DHCPEnabled bool `json:"dhcp_enabled"`
+			}
+			_ = json.Unmarshal([]byte(n.Details), &details)
+
+			req.Routers = append(req.Routers, ipamRouter{
+				ID:          nid,
+				GatewayIP:   n.IP,
+				DHCPEnabled: details.DHCPEnabled,
+			})
+		}
+
+		vms := make([]ipamVM, 0, len(n.VirtualMachines))
+		for _, vm := range n.VirtualMachines {
+			vms = append(vms, ipamVM{
+				ID:         vm.ID.String(),
+				ExistingIP: vm.IP,
+			})
+		}
+
+		req.Nodes = append(req.Nodes, ipamNode{
+			ID:          nid,
+			Type:        n.Type,
+			Connections: adj[nid],
+			ExistingIP:  n.IP,
+			VMs:         vms,
+		})
+	}
+
+	payload, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal validation payload: %w", err)
+	}
+
+	resp, err := s.client.Post(s.ipamURL+"/api/v1/validate", "application/json", bytes.NewReader(payload))
+	if err != nil {
+		return nil, fmt.Errorf("failed to call hlbIPAM validate: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("ipam service returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	rawResp, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read validation response: %w", err)
+	}
+
+	return json.RawMessage(rawResp), nil
 }
 
 // FallbackCalculateNetwork is kept as a safety net — if hlbIPAM is unreachable,

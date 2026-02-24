@@ -176,8 +176,12 @@ func (s *BuildService) syncGraph(tx *gorm.DB, buildID uuid.UUID, input SyncGraph
 			edge := models.Edge{
 				BuildID:      buildID,
 				SourceNodeID: sourceUUID,
+				SourceHandle: le.SourceHandle,
 				TargetNodeID: targetUUID,
+				TargetHandle: le.TargetHandle,
 				Type:         "ethernet",
+				Speed:        le.Speed,
+				Subnet:       le.Subnet,
 			}
 			if err := tx.Create(&edge).Error; err != nil {
 				return err
@@ -264,8 +268,12 @@ type ServiceDTO struct {
 }
 
 type EdgeDTO struct {
-	Source string `json:"source"`
-	Target string `json:"target"`
+	Source       string `json:"source"`
+	SourceHandle string `json:"source_handle"`
+	Target       string `json:"target"`
+	TargetHandle string `json:"target_handle"`
+	Speed        string `json:"speed"`
+	Subnet       string `json:"subnet"`
 }
 
 func (s *BuildService) ListByUser(userID uuid.UUID) ([]models.Build, error) {
@@ -379,8 +387,12 @@ func (s *BuildService) Duplicate(buildID uuid.UUID, userID uuid.UUID) (*models.B
 					ID:           uuid.New(),
 					BuildID:      newBuild.ID,
 					SourceNodeID: sourceUUID,
+					SourceHandle: edge.SourceHandle,
 					TargetNodeID: targetUUID,
+					TargetHandle: edge.TargetHandle,
 					Type:         edge.Type,
+					Speed:        edge.Speed,
+					Subnet:       edge.Subnet,
 				}
 				if err := tx.Create(&newEdge).Error; err != nil {
 					return err

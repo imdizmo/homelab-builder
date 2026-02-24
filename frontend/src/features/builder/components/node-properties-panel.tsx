@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui
 import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Label } from "../../../components/ui/label"
-import { X, Trash2, AlertCircle, Wand2, AlertTriangle } from "lucide-react"
+import { X, Trash2, AlertCircle, Wand2, AlertTriangle, Lock, Unlock, ChevronDown } from "lucide-react"
 import { VMManager } from "./vm-manager"
 import { InternalComponentManager } from "./internal-component-manager"
 
@@ -18,6 +18,8 @@ export function NodePropertiesPanel() {
     const [ip, setIp] = useState("")
     const [mask, setMask] = useState("")
     const [gateway, setGateway] = useState("")
+    const [dhcpEnabled, setDhcpEnabled] = useState(false)
+    const [dhcpLocked, setDhcpLocked] = useState(false)
     const [model, setModel] = useState("")
     const [cpu, setCpu] = useState("")
     const [ram, setRam] = useState("")
@@ -38,6 +40,8 @@ export function NodePropertiesPanel() {
             if (ip !== (selectedNode.ip || "")) setIp(selectedNode.ip || "")
             if (mask !== (selectedNode.subnet_mask || "")) setMask(selectedNode.subnet_mask || "")
             if (gateway !== (selectedNode.gateway || "")) setGateway(selectedNode.gateway || "")
+            if (dhcpEnabled !== (selectedNode.details?.dhcp_enabled ?? true)) setDhcpEnabled(selectedNode.details?.dhcp_enabled ?? true)
+            if (dhcpLocked !== (selectedNode.details?.dhcp_locked ?? false)) setDhcpLocked(selectedNode.details?.dhcp_locked ?? false)
             
             if (model !== (selectedNode.details?.model || "")) setModel(selectedNode.details?.model || "")
             if (cpu !== (selectedNode.details?.cpu?.toString() || "")) setCpu(selectedNode.details?.cpu?.toString() || "")
@@ -101,7 +105,9 @@ export function NodePropertiesPanel() {
                     gateway,
                     details: { 
                         ...selectedNode.details, 
-                        model, 
+                        model,
+                        dhcp_enabled: selectedNode.type === 'router' ? dhcpEnabled : undefined, 
+                        dhcp_locked: dhcpLocked,
                         cpu: parseNum(cpu), 
                         ram: rVal ? rVal * (ramUnit === 'TB' ? 1000 : 1) : undefined, 
                         storage: sVal ? sVal * (storageUnit === 'TB' ? 1000 : 1) : undefined,
@@ -112,7 +118,7 @@ export function NodePropertiesPanel() {
         }, 500) // 500ms debounce
 
         return () => clearTimeout(timer)
-    }, [name, ip, mask, gateway, model, cpu, ram, ramUnit, storage, storageUnit, ports])
+    }, [name, ip, mask, gateway, dhcpEnabled, dhcpLocked, model, cpu, ram, ramUnit, storage, storageUnit, ports])
 
     if (!selectedNode) return null
 
@@ -134,6 +140,15 @@ export function NodePropertiesPanel() {
         const assigned = autoAssignIP(selectedNode.id)
         if (assigned) setIp(assigned)
         else alert("No router with a configured IP found. Add a Router and set its IP first.")
+    }
+
+    const handleIpChange = (val: string) => {
+        setIp(val);
+        if (val.trim() === "") {
+            setDhcpLocked(false);
+        } else {
+            setDhcpLocked(true);
+        }
     }
 
     const isRouter = selectedNode.type === 'router'
@@ -200,64 +215,103 @@ export function NodePropertiesPanel() {
                     />
                 </div>
 
-                {/* IP Address */}
-                <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                        <Label htmlFor="ip">
-                            IP Address
-                            {!isNetworked && <span className="text-[10px] text-muted-foreground font-normal ml-1">(Optional)</span>}
-                        </Label>
-                        <div className="flex items-center gap-1">
-                            {errors.ip && <span className="text-[10px] text-destructive flex items-center"><AlertCircle className="h-3 w-3 mr-0.5"/>{errors.ip}</span>}
-                            {!isRouter && isNetworked && (
-                                <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-primary" onClick={handleAutoIP}>
-                                    <Wand2 className="h-3 w-3 mr-0.5" /> Auto
-                                </Button>
+                {/* Advanced Network Config Collapsible */}
+                {isNetworked && (
+                    <details className="group border rounded-md p-3 space-y-3 bg-muted/20">
+                        <summary className="flex items-center justify-between font-medium text-xs cursor-pointer list-none">
+                            <span>Advanced Network Settings</span>
+                            <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180 text-muted-foreground" />
+                        </summary>
+                        <div className="pt-2 space-y-4 animate-in slide-in-from-top-1 fade-in duration-200">
+                            {/* IP Address */}
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <Label htmlFor="ip">
+                                        IP Address
+                                    </Label>
+                                    <div className="flex items-center gap-1">
+                                        {errors.ip && <span className="text-[10px] text-destructive flex items-center"><AlertCircle className="h-3 w-3 mr-0.5"/>{errors.ip}</span>}
+                                        {!isRouter && (
+                                            <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-primary" onClick={handleAutoIP}>
+                                                <Wand2 className="h-3 w-3 mr-0.5" /> Auto
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 items-center">
+                                    <Input
+                                        id="ip"
+                                        value={ip}
+                                        onChange={e => handleIpChange(e.target.value)}
+                                        placeholder={isRouter ? "192.168.1.1" : (dhcpLocked ? "Static IP" : "auto from router")}
+                                        className={errors.ip ? "border-destructive focus-visible:ring-destructive" : ""}
+                                    />
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className={`h-9 w-9 shrink-0 transition-colors ${dhcpLocked ? "bg-primary/10 text-primary border-primary/30 hover:bg-primary/20 hover:text-primary" : "text-muted-foreground"}`}
+                                        onClick={() => setDhcpLocked(!dhcpLocked)}
+                                        title={dhcpLocked ? "IP is Locked (Static)" : "IP is Auto-Assigned (DHCP)"}
+                                    >
+                                        {dhcpLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                                    </Button>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground">
+                                    {dhcpLocked ? "This IP is locked and will not be overwritten by Auto Assign." : "This IP can be overwritten by Auto Assign if DHCP is enabled."}
+                                </p>
+                            </div>
+
+                            {/* Router-specific: Subnet Mask + Gateway */}
+                            {isRouter && (
+                                <>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between">
+                                            <Label htmlFor="mask">Subnet Mask</Label>
+                                            {errors.mask && <span className="text-[10px] text-destructive">{errors.mask}</span>}
+                                        </div>
+                                        <Input
+                                            id="mask"
+                                            value={mask}
+                                            onChange={(e) => setMask(e.target.value)}
+                                            placeholder="255.255.255.0"
+                                            className={errors.mask ? "border-destructive" : ""}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between">
+                                            <Label htmlFor="gateway">Gateway</Label>
+                                            {errors.gateway && <span className="text-[10px] text-destructive">{errors.gateway}</span>}
+                                        </div>
+                                        <Input
+                                            id="gateway"
+                                            value={gateway}
+                                            onChange={(e) => setGateway(e.target.value)}
+                                            placeholder="192.168.1.1"
+                                            className={errors.gateway ? "border-destructive" : ""}
+                                        />
+                                    </div>
+                                    <div className="flex items-center justify-between space-y-2 mt-4 pt-4 border-t border-border/50">
+                                        <Label htmlFor="dhcp_enabled" className="flex flex-col space-y-1">
+                                            <span>DHCP Server Enabled</span>
+                                            <span className="font-normal text-[10px] text-muted-foreground w-48">
+                                                Automatically assign IPs for nodes connected to this router.
+                                            </span>
+                                        </Label>
+                                        <input
+                                            type="checkbox"
+                                            id="dhcp_enabled"
+                                            checked={dhcpEnabled}
+                                            onChange={(e) => setDhcpEnabled(e.target.checked)}
+                                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground bg-primary/5 rounded-md px-2 py-1.5 mt-2">
+                                        💡 Set this router's IP to enable auto-assignment for other nodes.
+                                    </p>
+                                </>
                             )}
                         </div>
-                    </div>
-                    <Input
-                        id="ip"
-                        value={ip}
-                        onChange={e => setIp(e.target.value)}
-                        placeholder={isRouter ? "192.168.1.1" : (isNetworked ? "auto from router" : "no ip")}
-                        className={errors.ip ? "border-destructive focus-visible:ring-destructive" : ""}
-                    />
-                </div>
-
-                {/* Router-specific: Subnet Mask + Gateway */}
-                {isRouter && (
-                    <>
-                        <div className="space-y-2">
-                            <div className="flex justify-between">
-                                <Label htmlFor="mask">Subnet Mask</Label>
-                                {errors.mask && <span className="text-[10px] text-destructive">{errors.mask}</span>}
-                            </div>
-                            <Input
-                                id="mask"
-                                value={mask}
-                                onChange={(e) => setMask(e.target.value)}
-                                placeholder="255.255.255.0"
-                                className={errors.mask ? "border-destructive" : ""}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <div className="flex justify-between">
-                                <Label htmlFor="gateway">Gateway</Label>
-                                {errors.gateway && <span className="text-[10px] text-destructive">{errors.gateway}</span>}
-                            </div>
-                            <Input
-                                id="gateway"
-                                value={gateway}
-                                onChange={(e) => setGateway(e.target.value)}
-                                placeholder="192.168.1.1"
-                                className={errors.gateway ? "border-destructive" : ""}
-                            />
-                        </div>
-                        <p className="text-[10px] text-muted-foreground bg-primary/5 rounded-md px-2 py-1.5">
-                            💡 Set this router's IP to enable auto-assignment for other nodes.
-                        </p>
-                    </>
+                    </details>
                 )}
 
                 {/* Hardware Specs (Model, CPU, RAM, Storage, Ports) */}

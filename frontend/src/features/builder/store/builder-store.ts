@@ -62,6 +62,10 @@ interface BuilderState {
     showBought: boolean
     setShowBought: (v: boolean) => void
 
+    // Network Validation
+    validationIssues: { node_id: string; message: string; type: 'error' | 'warning' }[]
+    validateNetwork: () => Promise<void>
+
     clear: () => void
 
     // ── API Persistence ────────────────────────────────────────────────
@@ -92,6 +96,7 @@ export const useBuilderStore = create<BuilderState>()(
             selectedNodeId: null,
             boughtItems: [],
             showBought: false,
+            validationIssues: [],
             availableServices: [],
             fetchServices: async () => {
                 try {
@@ -403,8 +408,36 @@ export const useBuilderStore = create<BuilderState>()(
                         nodes: reactFlowNodesWithIPs as Node[],
                     })
 
+                    // Step 4: Validate the network automatically after assignment
+                    await get().validateNetwork()
+
                 } catch (e) {
                     console.error("Failed to reassign IPs", e)
+                }
+            },
+
+            validateNetwork: async () => {
+                const { currentBuildId } = get()
+                if (!currentBuildId) return
+
+                try {
+                    const response = await buildApi.validateNetwork(currentBuildId)
+                    // Ensure response is the nested JSON from hlbIPAM (it might be wrapped by our API)
+                    const data = response.data || response
+
+                    const issues: { node_id: string; message: string; type: 'error' | 'warning' }[] = []
+
+                    if (data.errors && Array.isArray(data.errors)) {
+                        data.errors.forEach((e: any) => issues.push({ ...e, type: 'error' }))
+                    }
+                    if (data.warnings && Array.isArray(data.warnings)) {
+                        data.warnings.forEach((w: any) => issues.push({ ...w, type: 'warning' }))
+                    }
+
+                    set({ validationIssues: issues })
+                } catch (e) {
+                    console.error("Failed to validate network", e)
+                    set({ validationIssues: [] })
                 }
             },
 
@@ -459,8 +492,15 @@ export const useBuilderStore = create<BuilderState>()(
                 // Map DB edges to React Flow edges
                 const rfEdges = (build.edges || []).map((e: any) => ({
                     id: String(e.id || `${e.source_node_id}-${e.target_node_id}`),
-                    source: e.source_node_id,
-                    target: e.target_node_id,
+                    source: String(e.source_node_id),
+                    sourceHandle: e.source_handle || undefined,
+                    target: String(e.target_node_id),
+                    targetHandle: e.target_handle || undefined,
+                    type: (e.type && e.type !== 'ethernet') ? e.type : 'custom',
+                    data: {
+                        speed: e.speed || '1 GbE',
+                        subnet: e.subnet || '',
+                    }
                 }));
 
                 set({
@@ -496,7 +536,11 @@ export const useBuilderStore = create<BuilderState>()(
 
                 const edgesPayload = state.edges.map(e => ({
                     source: e.source,
-                    target: e.target
+                    source_handle: e.sourceHandle || "",
+                    target: e.target,
+                    target_handle: e.targetHandle || "",
+                    speed: (e.data?.speed as string) || "1 GbE",
+                    subnet: (e.data?.subnet as string) || ""
                 }));
 
                 return {

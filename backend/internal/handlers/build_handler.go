@@ -151,6 +151,23 @@ func (h *BuildHandler) CalculateNetwork(c *gin.Context) {
 	})
 }
 
+func (h *BuildHandler) ValidateNetwork(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		return
+	}
+
+	result, err := h.ipService.ValidateNetwork(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate network: " + err.Error()})
+		return
+	}
+
+	c.Data(http.StatusOK, "application/json", result)
+}
+
 func (h *BuildHandler) Duplicate(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {

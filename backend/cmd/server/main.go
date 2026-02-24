@@ -136,6 +136,7 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 			protected.DELETE("/builds/:id", buildHandler.Delete)
 			protected.POST("/builds/:id/duplicate", buildHandler.Duplicate)
 			protected.POST("/builds/:id/calculate-network", buildHandler.CalculateNetwork)
+			protected.POST("/builds/:id/validate-network", buildHandler.ValidateNetwork)
 			protected.POST("/builds/:id/generate-config", configHandler.GenerateConfig)
 		}
 

@@ -7,7 +7,7 @@ import {
 import { Card } from '../../../components/ui/card'
 import { cn } from '../../../lib/utils'
 import type { HardwareType, VirtualMachine, HardwareComponent, HardwareSpec } from '../../../types'
-import { NON_NETWORK_TYPES } from '../store/builder-store'
+import { useBuilderStore, NON_NETWORK_TYPES } from '../store/builder-store'
 
 type HardwareNodeData = {
     label: string
@@ -111,6 +111,11 @@ export const HardwareNode = memo(({ id, data, selected }: NodeProps) => {
     const hasComponents = components.length > 0
     const isCompute = COMPUTE_TYPES.includes(nodeData.type)
 
+    const validationIssues = useBuilderStore(s => s.validationIssues)
+    const nodeIssues = validationIssues.filter((i: any) => i.node_id === id)
+    const hasIpError = nodeIssues.some((i: any) => i.type === 'error')
+    const hasIpWarning = nodeIssues.some((i: any) => i.type === 'warning')
+
     // React flow handles dynamically
     const updateNodeInternals = useUpdateNodeInternals()
     const numPorts = (nodeData.type === 'switch' || nodeData.type === 'router') 
@@ -131,7 +136,16 @@ export const HardwareNode = memo(({ id, data, selected }: NodeProps) => {
     
     const cpuWarning = totalCpu > 0 && usedCpu > totalCpu;
     const ramWarning = totalRamMB > 0 && usedRam > totalRamMB;
-    const hasWarning = cpuWarning || ramWarning;
+    const hasResourceWarning = cpuWarning || ramWarning;
+    const hasWarning = hasResourceWarning || hasIpError || hasIpWarning;
+
+    let tooltipLabel = '';
+    if (hasResourceWarning) {
+        tooltipLabel += `Resource limit exceeded!\nCPU: ${usedCpu}/${totalCpu}\nRAM: ${Math.round(usedRam/1024)}GB/${Math.round(totalRamMB/1024)}GB\n`;
+    }
+    if (nodeIssues.length > 0) {
+        tooltipLabel += nodeIssues.map((i: any) => (`${i.type.toUpperCase()}: ${i.message}`)).join('\n');
+    }
 
     useEffect(() => {
         updateNodeInternals(id)
@@ -157,7 +171,8 @@ export const HardwareNode = memo(({ id, data, selected }: NodeProps) => {
                     'transition-all duration-200 border-2 shadow-sm',
                     (hasVMs || hasComponents) ? 'w-56' : 'w-48',
                     cfg.border, cfg.bg,
-                    hasWarning ? 'border-destructive/60' : '',
+                    hasWarning ? 'border-destructive' : '',
+                    hasIpError ? 'shadow-[0_0_15px_rgba(239,68,68,0.5)] border-destructive bg-destructive/5' : '',
                     selected ? 'ring-2 ring-primary shadow-lg scale-105' : 'hover:border-primary/50'
                 )}
                 style={dynamicMinWidth > 192 ? { minWidth: `${dynamicMinWidth}px` } : undefined}
@@ -173,8 +188,8 @@ export const HardwareNode = memo(({ id, data, selected }: NodeProps) => {
                     </span>
                     
                     {hasWarning && (
-                        <div title={`Resource limit exceeded!\nCPU: ${usedCpu}/${totalCpu}\nRAM: ${Math.round(usedRam/1024)}GB/${Math.round(totalRamMB/1024)}GB`}>
-                            <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0 animate-pulse cursor-help" />
+                        <div title={tooltipLabel.trim()}>
+                            <AlertTriangle className={cn("h-3.5 w-3.5 shrink-0 cursor-help", hasIpError ? "text-destructive animate-pulse" : "text-yellow-500")} />
                         </div>
                     )}
 
@@ -291,7 +306,7 @@ export const HardwareNode = memo(({ id, data, selected }: NodeProps) => {
                     const portSpacing = 100 / (numPorts + 1);
                     return Array.from({ length: numPorts }).map((_, i) => (
                         <Handle
-                            key={`port-${numPorts}-${i}`}
+                            key={`port-eth${i}`}
                             id={`eth${i}`}
                             type="source"
                             position={Position.Bottom}
