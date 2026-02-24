@@ -10,6 +10,7 @@ DO NOT MAKE ANY "todo later" OR "include in production" CHANGES.
 EVEN THOUGH THIS IS NOT A PRODUCTION THIS NEEDS TO WORK LIKE IT.
 
 Test things in docker since I wanna keep my windows environment clean.
+Remember - I don't want migrations scripts or Legacy things support. If something needs to be changed in the database, just update the models and let the database be recreated.
 
 ---
 

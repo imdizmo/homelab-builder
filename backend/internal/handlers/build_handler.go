@@ -21,11 +21,8 @@ func NewBuildHandler(service *services.BuildService, ipService *services.IPServi
 	}
 }
 
-type CreateBuildRequest struct {
-	Name      string `json:"name" binding:"required"`
-	Data      string `json:"data" binding:"required"` // Assuming JSON string
-	Thumbnail string `json:"thumbnail"`
-}
+// We no longer define CreateBuildRequest locally.
+// We bind directly to the new structured DTO `services.SyncGraphInput`.
 
 func (h *BuildHandler) Create(c *gin.Context) {
 	userID, exists := c.Get("user_id")
@@ -34,13 +31,13 @@ func (h *BuildHandler) Create(c *gin.Context) {
 		return
 	}
 
-	var req CreateBuildRequest
+	var req services.SyncGraphInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	build, err := h.service.Create(userID.(uuid.UUID), req.Name, req.Data, req.Thumbnail)
+	build, err := h.service.Create(userID.(uuid.UUID), req)
 	if err != nil {
 		log.Printf("Build Create Error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create build"})
@@ -97,13 +94,13 @@ func (h *BuildHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var req CreateBuildRequest
+	var req services.SyncGraphInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	build, err := h.service.Update(id, userID.(uuid.UUID), req.Name, req.Data, req.Thumbnail)
+	build, err := h.service.Update(id, userID.(uuid.UUID), req)
 	if err != nil {
 		log.Printf("Build Update Error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update build"})

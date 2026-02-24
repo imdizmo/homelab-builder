@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../../admin/hooks/use-auth"
-import { Plus, Folder, Clock, MoreVertical, Trash2, Edit2, Play, HardDrive, Search, Download, Upload } from "lucide-react" 
+import { Plus, Folder, Clock, MoreVertical, Trash2, Edit2, Play, HardDrive, Search, Download, Upload, Zap } from "lucide-react" 
 // Removed unused imports: ExternalLink, Cpu
 import { Button } from "../../../components/ui/button"
 import { Card } from "../../../components/ui/card"
@@ -19,6 +19,8 @@ import { toast } from "sonner"
 import { buildApi, type Build } from "../api/builds"
 import { useBuilderStore } from "../store/builder-store"
 import { formatDistanceToNow } from "date-fns"
+import { FastStartWizard } from '../components/fast-start-wizard'
+import { generateFastStartPayload } from '../../../lib/templates'
 
 export default function ProjectsPage() {
     const navigate = useNavigate()
@@ -37,6 +39,10 @@ export default function ProjectsPage() {
     const [isRenameOpen, setIsRenameOpen] = useState(false)
     const [projectToRename, setProjectToRename] = useState<Build | null>(null)
     const [renameValue, setRenameValue] = useState("")
+
+    // Fast Start Wizard State
+    const [isFastStartOpen, setIsFastStartOpen] = useState(false)
+    const [isGeneratingFastStart, setIsGeneratingFastStart] = useState(false)
 
     useEffect(() => {
         if (isAuthenticated) {
@@ -100,10 +106,14 @@ export default function ProjectsPage() {
     const confirmCreate = async () => {
         try {
             const name = newProjectName.trim() || (importData ? "Imported Project" : "New Project")
+            const parsedData = importData ? JSON.parse(importData) : {}
             const newBuild = await buildApi.create({
                 name: name,
-                data: importData || JSON.stringify({}), 
                 thumbnail: "",
+                nodes: parsedData.nodes || [],
+                edges: parsedData.edges || [],
+                services: parsedData.services || [],
+                settings: parsedData.settings || {}
             });
             
             loadBuild(newBuild.id, newBuild.name, importData ? JSON.parse(importData) : {})
@@ -118,22 +128,47 @@ export default function ProjectsPage() {
         }
     }
 
+    const handleFastStartGenerate = async (goal: string, scale: string) => {
+        setIsGeneratingFastStart(true)
+        try {
+            const payload = generateFastStartPayload(goal, scale)
+            const newBuild = await buildApi.create({
+                name: payload.name,
+                thumbnail: "",
+                nodes: payload.nodes,
+                edges: payload.edges,
+                services: [],
+                settings: {}
+            })
+            // generate dynamic IPs instantly 
+            await buildApi.calculateNetwork(newBuild.id)
+            
+            toast.success(`Generated Template: ${payload.name}`)
+            navigate(`/builder/${newBuild.id}`)
+        } catch (err) {
+            console.error("Failed to generate wizard template", err)
+            toast.error("Failed to generate project template")
+        } finally {
+            setIsGeneratingFastStart(false)
+            setIsFastStartOpen(false)
+        }
+    }
+
     const handleExport = async (e: React.MouseEvent, build: Build) => {
         e.stopPropagation()
         try {
-            // The list view might have truncated or omitted .data, so we fetch the full representation.
+            // The list view might have truncated relationships, so we fetch the full representation.
             const fullBuild = await buildApi.get(build.id)
-            const rawData = JSON.parse(fullBuild.data || '{}')
-            // Ensure the exported payload matches the .homelab.json schema required by the importer
+            const rawData = fullBuild
+            // Assemble a .homelab.json standard file using relational tables mapped into flat arrays
             const payload = {
                 version: 1,
                 name: fullBuild.name,
                 exportedAt: new Date().toISOString(),
-                hardwareNodes: rawData.hardwareNodes || [],
                 nodes: rawData.nodes || [],
                 edges: rawData.edges || [],
-                boughtItems: rawData.boughtItems || [],
-                showBought: rawData.showBought || false
+                boughtItems: rawData.settings?.boughtItems || [],
+                showBought: rawData.settings?.showBought || false
             }
             const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
             const url = URL.createObjectURL(blob)
@@ -202,8 +237,11 @@ export default function ProjectsPage() {
             const fullBuild = await buildApi.get(projectToRename.id)
             const updated = await buildApi.update(projectToRename.id, {
                 name: newName,
-                data: fullBuild.data,
-                thumbnail: fullBuild.thumbnail
+                thumbnail: fullBuild.thumbnail,
+                nodes: fullBuild.nodes || [],
+                edges: fullBuild.edges || [],
+                services: [],
+                settings: fullBuild.settings || {}
             })
             // Update local state listing
             setBuilds(prev => prev.map(b => b.id === updated.id ? { ...b, name: updated.name } : b))
@@ -243,6 +281,9 @@ export default function ProjectsPage() {
                     <input type="file" ref={fileInputRef} accept=".json,.homelab.json" className="hidden" onChange={handleFileChange} />
                     <Button variant="outline" onClick={handleImportClick}>
                         <Upload className="mr-2 h-4 w-4" /> Import
+                    </Button>
+                    <Button variant="outline" className="text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-800/30 dark:hover:bg-amber-900/20 dark:hover:text-amber-400" onClick={() => setIsFastStartOpen(true)}>
+                        <Zap className="mr-2 h-4 w-4" /> Fast Start
                     </Button>
                     <Button onClick={handleCreateNew}>
                         <Plus className="mr-2 h-4 w-4" /> New Project
@@ -421,6 +462,13 @@ export default function ProjectsPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <FastStartWizard 
+                isOpen={isFastStartOpen} 
+                onClose={() => setIsFastStartOpen(false)} 
+                onGenerate={handleFastStartGenerate} 
+                isGenerating={isGeneratingFastStart} 
+            />
         </div>
     )
 }

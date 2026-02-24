@@ -118,18 +118,9 @@ export default function ConfigGeneratorPage() {
         try {
              const fullBuild = await buildApi.get(id)
              console.log(`[ConfigGen] Fetched build: ${fullBuild.name}`, fullBuild)
-             let data = {}
-             try {
-                data = JSON.parse(fullBuild.data)
-             } catch (e) {
-                 console.error("[ConfigGen] JSON parse error for build data", e)
-                 toast.error("Failed to parse build data")
-             }
              
-             console.log(`[ConfigGen] Loading data into store...`, data)
-             console.log(`[ConfigGen] Loading data into store...`, data)
-             loadBuild(fullBuild.id, fullBuild.name, data)
-             setLabName(fullBuild.name.toLowerCase().replace(/[^a-z0-9]/g, '-'))
+             console.log(`[ConfigGen] Loading data into store...`, fullBuild)
+             loadBuild(fullBuild.id, fullBuild.name, fullBuild)
              setLabName(fullBuild.name.toLowerCase().replace(/[^a-z0-9]/g, '-'))
              toast.success(`Loaded project: ${fullBuild.name}`)
         } catch (e) {

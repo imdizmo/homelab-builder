@@ -38,9 +38,23 @@ services:
       DB_TYPE: postgres
       JWT_SECRET: change-this-in-production
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      IPAM_URL: http://hlbipam:8081
     depends_on:
       postgres:
         condition: service_healthy
+      hlbipam:
+        condition: service_started
+    restart: unless-stopped
+
+  hlbipam:
+    build:
+      context: ./hlbipam
+      dockerfile: Dockerfile
+    container_name: homelab-builder-ipam
+    ports:
+      - "8081:8081"
+    environment:
+      PORT: "8081"
     restart: unless-stopped
 
   frontend:

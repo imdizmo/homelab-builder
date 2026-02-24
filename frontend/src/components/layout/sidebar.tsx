@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom"
+import { NavLink, useNavigate } from "react-router-dom"
 import { LayoutDashboard, ShoppingCart, CheckSquare, Settings, Hammer, HardDrive, FileCode } from "lucide-react"
 import { cn } from "../../lib/utils"
 
@@ -18,11 +18,12 @@ const BASE_NAV_ITEMS = [
 import { useAuth } from "../../features/admin/hooks/use-auth"
 import { useBuilderStore } from "../../features/builder/store/builder-store"
 import { GoogleLoginButton } from "../auth/google-login-button"
-import { LogOut, LayoutTemplate } from "lucide-react"
+import { LayoutTemplate } from "lucide-react"
 
 export function Sidebar({ className }: { className?: string }) {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const { currentBuildId } = useBuilderStore()
+  const navigate = useNavigate()
   
   const navItems = [
     BASE_NAV_ITEMS[0],
@@ -58,28 +59,32 @@ export function Sidebar({ className }: { className?: string }) {
         </nav>
       </div>
 
-      <div className="border-t p-4 flex gap-2">
-        <div className="flex-1 flex items-center gap-3 rounded-lg border bg-muted/50 p-2 min-h-[3.5rem]">
+        <div className="border-t p-4">
+          <div
+            className="flex items-center gap-3 rounded-lg border bg-muted/50 p-2 min-h-[3.5rem] cursor-pointer hover:bg-accent/50 transition-colors"
+            onClick={() => user ? navigate('/profile') : undefined}
+            title={user ? 'View profile' : undefined}
+          >
             {user ? (
-                 <>
-                    <img src={user.avatar_url} className="h-8 w-8 rounded-full bg-primary/20" alt={user.name} />
-                    <div className="flex flex-col overflow-hidden w-full">
-                        <span className="text-sm font-medium truncate" title={user.name}>{user.name}</span>
-                        <button 
-                          onClick={logout}
-                          className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1"
-                        >
-                            <LogOut className="h-3 w-3" /> Logout
-                        </button>
-                    </div>
-                 </>
+               <>
+                  <img
+                    src={user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.email)}`}
+                    className="h-8 w-8 rounded-full bg-primary/20 shrink-0"
+                    alt={user.name}
+                    onError={(e) => { (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${user.name}` }}
+                  />
+                  <div className="flex flex-col overflow-hidden flex-1">
+                      <span className="text-sm font-medium truncate" title={user.name}>{user.name}</span>
+                      <span className="text-xs text-muted-foreground truncate">{user.email}</span>
+                  </div>
+               </>
             ) : (
                 <div className="w-full">
                      <GoogleLoginButton />
                 </div>
             )}
+          </div>
         </div>
-      </div>
     </aside>
   )
 }

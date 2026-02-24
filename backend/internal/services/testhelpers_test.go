@@ -77,8 +77,11 @@ func migrateTestDB(db *gorm.DB) error {
 	db.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`)
 	return db.AutoMigrate(
 		&models.User{},
+		&models.Service{},
+		&models.ServiceRequirement{},
 		&models.Build{},
 		&models.Node{},
+		&models.NodeComponent{},
 		&models.VirtualMachine{},
 		&models.Edge{},
 		&models.ServiceInstance{},

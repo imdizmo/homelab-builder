@@ -18,6 +18,7 @@ interface Props {
 export function ComponentDetailsDialog({ open, onOpenChange, onConfirm, initialType, initialName, initialDetails, title }: Props) {
     const [name, setName] = useState(initialName || "")
     const [model, setModel] = useState(initialDetails?.model || "")
+    const [spec, setSpec] = useState<HardwareSpec>(initialDetails || {})
 
     // Split states for units and CPU
     const [cpuCores, setCpuCores] = useState("")
@@ -60,6 +61,7 @@ export function ComponentDetailsDialog({ open, onOpenChange, onConfirm, initialT
         if (open) {
             setName(initialName || "")
             setModel(initialDetails?.model || "")
+            setSpec(initialDetails || {})
 
             // Support both `cpu` (new) and `cpu_cores` (legacy)
             setCpuCores(initialDetails?.cpu?.toString() || initialDetails?.cpu_cores?.toString() || "")
@@ -77,7 +79,7 @@ export function ComponentDetailsDialog({ open, onOpenChange, onConfirm, initialT
     }, [open, initialName, initialDetails])
 
     const handleConfirm = () => {
-        const finalSpec: HardwareSpec = { model }
+        const finalSpec: HardwareSpec = { ...spec, model }
         
         // Output cores to `cpu` attribute since that is the new standard
         if (cpuCores) finalSpec.cpu = parseInt(cpuCores, 10)

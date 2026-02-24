@@ -10,8 +10,8 @@ import (
 
 type User struct {
 	ID          uuid.UUID       `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
-	GoogleID    string          `gorm:"uniqueIndex;column:google_id" json:"google_id,omitempty"`
-	Email       string          `gorm:"uniqueIndex;not null" json:"email"`
+	GoogleID    string          `gorm:"unique;column:google_id" json:"google_id,omitempty"`
+	Email       string          `gorm:"unique;not null" json:"email"`
 	Name        string          `gorm:"not null;default:''" json:"name"`
 	AvatarURL   string          `gorm:"default:''" json:"avatar_url,omitempty"`
 	IsAdmin     bool            `gorm:"default:false" json:"is_admin"`
@@ -40,7 +40,7 @@ type Service struct {
 
 type ServiceRequirement struct {
 	ID                   uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
-	ServiceID            uuid.UUID `gorm:"type:uuid;uniqueIndex;not null" json:"service_id"`
+	ServiceID            uuid.UUID `gorm:"type:uuid;unique;not null" json:"service_id"`
 	MinRAMMB             int       `gorm:"column:min_ram_mb;not null;default:256" json:"min_ram_mb"`
 	RecommendedRAMMB     int       `gorm:"column:recommended_ram_mb;not null;default:512" json:"recommended_ram_mb"`
 	MinCPUCores          float32   `gorm:"not null;default:0.5" json:"min_cpu_cores"`
@@ -139,14 +139,14 @@ func (HardwareReview) TableName() string { return "hardware_reviews" }
 
 // Build represents a saved visual builder project
 type Build struct {
-	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
-	UserID    uuid.UUID `gorm:"type:uuid;not null;index" json:"user_id"` // Owner
-	Name      string    `gorm:"not null" json:"name"`
-	Data      string    `gorm:"type:jsonb;not null;default:'{}'" json:"data"` // React Flow + Builder Store JSON
-	Thumbnail string    `gorm:"default:''" json:"thumbnail"`                  // Base64 or URL
-	User      *User     `gorm:"foreignKey:UserID" json:"-"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        uuid.UUID       `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
+	UserID    uuid.UUID       `gorm:"type:uuid;not null;index" json:"user_id"` // Owner
+	Name      string          `gorm:"not null" json:"name"`
+	Settings  json.RawMessage `gorm:"type:jsonb;default:'{}'" json:"settings"` // UI state e.g. boughtItems
+	Thumbnail string          `gorm:"default:''" json:"thumbnail"`             // Base64 or URL
+	User      *User           `gorm:"foreignKey:UserID" json:"-"`
+	CreatedAt time.Time       `json:"created_at"`
+	UpdatedAt time.Time       `json:"updated_at"`
 
 	// Relations
 	Nodes []Node `gorm:"foreignKey:BuildID" json:"nodes,omitempty"`
@@ -169,11 +169,25 @@ type Node struct {
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
 
-	ServiceInstances []ServiceInstance `gorm:"foreignKey:NodeID" json:"service_instances,omitempty"`
-	VirtualMachines  []VirtualMachine  `gorm:"foreignKey:NodeID" json:"virtual_machines,omitempty"`
+	ServiceInstances   []ServiceInstance `gorm:"foreignKey:NodeID;constraint:OnDelete:CASCADE;" json:"service_instances,omitempty"`
+	VirtualMachines    []VirtualMachine  `gorm:"foreignKey:NodeID;constraint:OnDelete:CASCADE;" json:"virtual_machines,omitempty"`
+	InternalComponents []NodeComponent   `gorm:"foreignKey:NodeID;constraint:OnDelete:CASCADE;" json:"internal_components,omitempty"`
 }
 
 func (Node) TableName() string { return "nodes" }
+
+// NodeComponent represents an internal hardware piece (e.g. disk, GPU) inside a Node
+type NodeComponent struct {
+	ID        uuid.UUID       `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
+	NodeID    uuid.UUID       `gorm:"type:uuid;not null;index" json:"node_id"`
+	Type      string          `gorm:"not null" json:"type"` // disk, gpu, hba etc.
+	Name      string          `gorm:"not null" json:"name"`
+	Details   json.RawMessage `gorm:"type:jsonb;default:'{}'" json:"details"` // Component specs
+	CreatedAt time.Time       `json:"created_at"`
+	UpdatedAt time.Time       `json:"updated_at"`
+}
+
+func (NodeComponent) TableName() string { return "node_components" }
 
 // VirtualMachine represents a nested VM/Container on a node
 type VirtualMachine struct {

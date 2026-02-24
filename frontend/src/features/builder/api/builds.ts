@@ -5,12 +5,12 @@ export interface Build {
     id: string;
     user_id: string;
     name: string;
-    data: string; // JSON string of builder state
     thumbnail?: string;
+    settings: any; // e.g. boughtItems, showBought
     created_at: string;
     updated_at: string;
 
-    // Relational Data (Optional, populated by backend Preload)
+    // Relational Data from Preloads
     nodes?: any[];
     edges?: any[];
     virtual_machines?: any[];
@@ -19,8 +19,11 @@ export interface Build {
 
 export type CreateBuildParams = {
     name: string;
-    data: string;
     thumbnail?: string;
+    settings: any;
+    nodes: any[];
+    edges: any[];
+    services: any[];
 };
 
 export const buildApi = {

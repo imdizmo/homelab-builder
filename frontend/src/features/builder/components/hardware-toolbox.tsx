@@ -326,7 +326,7 @@ export function HardwareToolbox() {
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
-                                    className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold uppercase tracking-wide transition-colors ${
+                                    className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold uppercase tracking-wide transition-colors ${tab.id === 'services' ? 'tour-toolbox-services' : ''} ${
                                         activeTab === tab.id
                                             ? 'text-primary border-b-2 border-primary bg-primary/5'
                                             : 'text-muted-foreground hover:text-foreground'

@@ -12,6 +12,7 @@ import {
 } from '@xyflow/react';
 import { toast } from "sonner";
 import '@xyflow/react/dist/style.css';
+import Joyride, { type CallBackProps, STATUS, type Step } from 'react-joyride';
 import { useBuilderStore } from '../store/builder-store';
 import { HardwareToolbox } from './hardware-toolbox';
 import { HardwareNode as HardwareNodeComponent } from './hardware-node';
@@ -60,6 +61,43 @@ function Flow() {
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { logout } = useAuth();
 
+    // Joyride Tour State
+    const [runTour, setRunTour] = useState(false);
+    const [tourSteps] = useState<Step[]>([
+        {
+            target: '.tour-toolbox',
+            content: 'Welcome to Homelab Builder! Drag networking gear and servers from this toolbox onto your canvas.',
+            disableBeacon: true,
+        },
+        {
+            target: '.react-flow__pane',
+            content: 'Hover over a device to reveal its network ports. Drag a cable from one port to another to connect them.',
+        },
+        {
+            target: '.tour-toolbox-services',
+            content: 'Switch to the Services tab. You can drag applications (like Docker, Nextcloud) directly INTO a Server node to deploy them.',
+        },
+        {
+            target: '.tour-properties',
+            content: 'Click any device on the canvas to configure its IPs, hardware specs, and passwords in this properties panel.',
+        }
+    ]);
+
+    useEffect(() => {
+        const hasSeenTour = localStorage.getItem('hlb_has_seen_tour');
+        if (!hasSeenTour) {
+            setRunTour(true);
+        }
+    }, []);
+
+    const handleJoyrideCallback = (data: CallBackProps) => {
+        const { status } = data;
+        if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status as any)) {
+            setRunTour(false);
+            localStorage.setItem('hlb_has_seen_tour', 'true');
+        }
+    };
+
     const {
         nodes,
         edges,
@@ -86,32 +124,7 @@ function Flow() {
     useEffect(() => {
         if (id && id !== currentBuildId) {
             buildApi.get(id).then(build => {
-                const data = JSON.parse(build.data);
-
-                // MERGE Relational Data (Source of Truth for IPs and Backend State)
-                if (build.nodes && build.nodes.length > 0) {
-                    data.hardwareNodes = build.nodes.map((n: any) => ({
-                        id: n.id,
-                        type: n.type,
-                        name: n.name,
-                        x: n.x,
-                        y: n.y,
-                        ip: n.ip, // Important: Get the calculated IP
-                        details: typeof n.details === 'string' ? JSON.parse(n.details) : n.details,
-                        vms: n.virtual_machines?.map((vm: any) => ({
-                            id: vm.id,
-                            name: vm.name,
-                            type: vm.type,
-                            ip: vm.ip,
-                            os: vm.os,
-                            cpu_cores: vm.cpu_cores,
-                            ram_mb: vm.ram_mb,
-                            status: vm.status
-                        })) || []
-                    }));
-                }
-
-                loadBuild(build.id, build.name, data);
+                loadBuild(build.id, build.name, build);
             }).catch(err => {
                 console.error("Failed to load build", err);
                 useBuilderStore.getState().clearCurrentBuild();
@@ -134,11 +147,10 @@ function Flow() {
         setSaveStatus('saving');
         try {
             const data = getBuildData();
-            const jsonString = JSON.stringify(data);
             await buildApi.update(id, {
                 name: projectName || "Untitled Project", // Use store name
-                data: jsonString,
-                thumbnail: ""
+                thumbnail: "",
+                ...data
             });
             setSaveStatus('saved');
             lastSaveTime.current = Date.now();
@@ -377,7 +389,24 @@ function Flow() {
 
     return (
         <div className="flex h-full border-b bg-background overflow-hidden relative">
-            <HardwareToolbox />
+            <Joyride
+                steps={tourSteps}
+                run={runTour}
+                continuous={true}
+                showSkipButton={true}
+                showProgress={true}
+                callback={handleJoyrideCallback}
+                styles={{
+                    options: {
+                        primaryColor: '#f97316',
+                        zIndex: 10000,
+                    }
+                }}
+            />
+
+            <div className="tour-toolbox">
+                <HardwareToolbox />
+            </div>
 
             <div className="flex-1 h-full relative" ref={reactFlowWrapper}>
                 <LiveResourceDashboard />
@@ -459,7 +488,7 @@ function Flow() {
                     </Button>
                 </Panel>
 
-                <Panel position="top-right">
+                <Panel position="top-right" className="tour-properties">
                     {selectedNodeId && <NodePropertiesPanel />}
                 </Panel>
 

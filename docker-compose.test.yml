@@ -1,0 +1,54 @@
+version: '3.8'
+
+# Run with:
+#   docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+# Exit code 0 = all tests passed
+
+services:
+  test-postgres:
+    image: postgres:15
+    container_name: homelab-builder-test-db
+    environment:
+      POSTGRES_USER: homelab
+      POSTGRES_PASSWORD: homelab_password
+      POSTGRES_DB: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U homelab -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # hlbIPAM running instance for backend integration tests
+  hlbipam:
+    build:
+      context: ./hlbipam
+      dockerfile: Dockerfile
+    container_name: homelab-builder-test-ipam
+    environment:
+      PORT: "8081"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8081/health"]
+      interval: 3s
+      timeout: 2s
+      retries: 10
+
+  # Backend tests (requires postgres + hlbipam)
+  backend-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.test
+    container_name: homelab-builder-backend-test
+    environment:
+      DB_TYPE: postgres
+      DB_HOST: test-postgres
+      DB_PORT: "5432"
+      DB_USER: homelab
+      DB_PASSWORD: homelab_password
+      DB_SSLMODE: disable
+      TEST_DB_NAME: homelab_builder_test
+      IPAM_URL: http://hlbipam:8081
+    depends_on:
+      test-postgres:
+        condition: service_healthy
+      hlbipam:
+        condition: service_healthy

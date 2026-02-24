@@ -12,7 +12,7 @@ import {
     type Connection,
 } from '@xyflow/react'
 import type { Service, HardwareNode, VirtualMachine, HardwareType, HardwareComponent } from '../../../types'
-import { buildApi } from '../api/builds'
+import { buildApi, type Build } from '../api/builds'
 import { api } from '../../../services/api'
 
 // Types that never get an IP address
@@ -348,8 +348,8 @@ export const useBuilderStore = create<BuilderState>()(
                     const data = getBuildData()
                     await buildApi.update(currentBuildId, {
                         name: projectName || 'Untitled Project',
-                        data: JSON.stringify(data),
                         thumbnail: '',
+                        ...data
                     })
 
                     // Step 2: Ask the backend to calculate and assign IPs.
@@ -361,47 +361,46 @@ export const useBuilderStore = create<BuilderState>()(
                     // the relational nodes table (updated by calculateNetwork) on top of the
                     // blob, so nothing is lost and IPs are always fresh.
                     const build = await buildApi.get(currentBuildId)
-                    const savedData = JSON.parse(build.data || '{}')
 
                     // Build a lookup: "id" → { nodeIp, vmIps }
                     type VmIpMap = Map<string, string>
                     interface NodeIpEntry { nodeIp: string; vmMap: VmIpMap }
                     const ipById = new Map<string, NodeIpEntry>()
                         ; ((build as any).nodes ?? []).forEach((n: any) => {
-                            if (!n.ip) return
-                            const vmMap: VmIpMap = new Map()
+                            const vmIps: VmIpMap = new Map()
                                 ; (n.virtual_machines ?? []).forEach((vm: any) => {
-                                    if (vm.ip) vmMap.set(vm.id, vm.ip)
+                                    if (vm.ip) vmIps.set(vm.id, vm.ip)
                                 })
-                            ipById.set(n.id, { nodeIp: n.ip, vmMap })
+                            ipById.set(n.id, { nodeIp: n.ip, vmMap: vmIps })
                         })
 
-                    // Overlay IPs onto the saved blob's hardwareNodes
-                    const hardwareNodesWithIPs = (savedData.hardwareNodes ?? []).map((hn: any) => {
+                    // Patch local state
+                    const hardwareNodesWithIPs = get().hardwareNodes.map(hn => {
                         const entry = ipById.get(hn.id)
                         if (!entry) return hn
-                        const vmsWithIPs = (hn.vms ?? []).map((vm: any) => {
-                            const vmIp = entry.vmMap.get(vm.id)
-                            return vmIp ? { ...vm, ip: vmIp } : vm
-                        })
-                        return { ...hn, ip: entry.nodeIp, vms: vmsWithIPs }
+                        return {
+                            ...hn,
+                            ip: entry.nodeIp,
+                            vms: hn.vms?.map(vm => ({ ...vm, ip: entry.vmMap.get(vm.id) || vm.ip }))
+                        }
                     })
 
-                    // its IP from node.data.ip, not from hardwareNodes directly.
-                    const nodeMap = new Map<string, any>(
-                        hardwareNodesWithIPs.map((hn: any) => [hn.id, hn])
-                    )
-                    const reactFlowNodesWithIPs = (savedData.nodes ?? []).map((rfn: any) => {
-                        const hn = nodeMap.get(rfn.id)
-                        return hn
-                            ? { ...rfn, data: { ...rfn.data, ip: hn.ip, vms: hn.vms } }
-                            : rfn
+                    const reactFlowNodesWithIPs = get().nodes.map(rfn => {
+                        const entry = ipById.get(rfn.id)
+                        if (!entry) return rfn
+                        return {
+                            ...rfn,
+                            data: {
+                                ...rfn.data,
+                                ip: entry.nodeIp,
+                                vms: (Array.isArray(rfn.data?.vms) ? rfn.data.vms : []).map((vm: any) => ({ ...vm, ip: entry.vmMap.get(vm.id) || vm.ip }))
+                            }
+                        }
                     })
 
-                    get().loadBuild(build.id, build.name, {
-                        ...savedData,
-                        hardwareNodes: hardwareNodesWithIPs,
-                        nodes: reactFlowNodesWithIPs,
+                    set({
+                        hardwareNodes: hardwareNodesWithIPs as HardwareNode[],
+                        nodes: reactFlowNodesWithIPs as Node[],
                     })
 
                 } catch (e) {
@@ -431,65 +430,83 @@ export const useBuilderStore = create<BuilderState>()(
             }),
             setProjectName: (name) => set({ projectName: name }),
 
-            loadBuild: (id, name, data) => {
-                const hardwareNodes: HardwareNode[] = data.hardwareNodes || []
+            loadBuild: (id, name, build: Build) => {
+                const settings = build.settings || {};
 
-                // Build a lookup for fast access
-                const hwMap = new Map<string, HardwareNode>(hardwareNodes.map(n => [n.id, n]))
+                // Map relational `nodes` back into flattened array structure 
+                const hardwareNodes: HardwareNode[] = (build.nodes || []).map((n: any) => ({
+                    id: n.id,
+                    type: n.type as any,
+                    name: n.name,
+                    ip: n.ip,
+                    x: n.x || 0,
+                    y: n.y || 0,
+                    vms: n.virtual_machines || [],
+                    internal_components: n.internal_components || [],
+                    details: typeof n.details === 'string' ? JSON.parse(n.details) : (n.details || {})
+                }));
 
-                // Merge authoritative internal_components and vms from hardwareNodes into
-                // the React Flow node .data objects — they may have diverged if the RF nodes
-                // were saved before these fields were introduced or failed to sync.
-                const syncedRfNodes = (data.nodes || []).map((rfn: any) => {
-                    const hw = hwMap.get(rfn.id)
-                    if (!hw) return rfn
-                    return {
-                        ...rfn,
-                        data: {
-                            ...rfn.data,
-                            internal_components: hw.internal_components ?? rfn.data?.internal_components ?? [],
-                            vms: hw.vms ?? rfn.data?.vms ?? [],
-                            details: hw.details ?? rfn.data?.details,
-                        }
-                    }
-                })
+                const hwMap = new Map<string, HardwareNode>(hardwareNodes.map((n: any) => [n.id, n]));
+
+                // Construct React Flow nodes from the relational DB nodes
+                const rfNodes = (build.nodes || []).map((n: any) => ({
+                    id: n.id,
+                    type: 'hardware',
+                    position: { x: n.x, y: n.y },
+                    data: { ...(hwMap.get(n.id) || {}), label: n.name }
+                }));
+
+                // Map DB edges to React Flow edges
+                const rfEdges = (build.edges || []).map((e: any) => ({
+                    id: String(e.id || `${e.source_node_id}-${e.target_node_id}`),
+                    source: e.source_node_id,
+                    target: e.target_node_id,
+                }));
 
                 set({
                     currentBuildId: id,
                     projectName: name,
                     hardwareNodes,
-                    nodes: syncedRfNodes,
-                    edges: data.edges || [],
-                    boughtItems: data.boughtItems || [],
-                    showBought: data.showBought || false
+                    nodes: rfNodes,
+                    edges: rfEdges,
+                    boughtItems: settings.boughtItems || [],
+                    showBought: settings.showBought || false
                 });
             },
 
             getBuildData: () => {
-                // Return a JSON-serializable snapshot.
-                // Sync hardwareNodes data (authoritative) into the RF node .data
-                // objects before saving so internal_components are never lost.
                 const state = get();
                 const hwMap = new Map<string, HardwareNode>(state.hardwareNodes.map(n => [n.id, n]))
-                const syncedNodes = state.nodes.map(rfn => {
-                    const hw = hwMap.get(rfn.id)
-                    if (!hw) return rfn
+
+                // Construct the payload structure exactly matching backend DTO definitions
+                const nodesPayload = state.nodes.map(rfn => {
+                    const hw = hwMap.get(rfn.id) || ({} as any);
                     return {
-                        ...rfn,
-                        data: {
-                            ...rfn.data,
-                            internal_components: hw.internal_components ?? [],
-                            vms: hw.vms ?? [],
-                            details: hw.details,
-                        }
+                        id: rfn.id,
+                        type: rfn.data?.type || hw.type,
+                        name: rfn.data?.name || hw.name,
+                        x: rfn.position.x,
+                        y: rfn.position.y,
+                        ip: rfn.data?.ip || hw.ip || "",
+                        details: rfn.data?.details || hw.details || {},
+                        vms: rfn.data?.vms || hw.vms || [],
+                        internal_components: rfn.data?.internal_components || hw.internal_components || []
                     }
-                })
+                });
+
+                const edgesPayload = state.edges.map(e => ({
+                    source: e.source,
+                    target: e.target
+                }));
+
                 return {
-                    hardwareNodes: state.hardwareNodes,
-                    nodes: syncedNodes,
-                    edges: state.edges,
-                    boughtItems: state.boughtItems,
-                    showBought: state.showBought
+                    nodes: nodesPayload,
+                    edges: edgesPayload,
+                    services: [],
+                    settings: {
+                        boughtItems: state.boughtItems,
+                        showBought: state.showBought
+                    }
                 };
             },
 

@@ -11,6 +11,8 @@ import HardwareCatalogPage from './features/catalog/pages/hardware-catalog-page'
 import ServiceCatalogPage from './features/catalog/pages/service-catalog-page';
 import ChecklistPage from './features/setup-guide/pages/checklist-page';
 import ConfigGeneratorPage from './features/builder/pages/config-generator-page';
+import ProfilePage from './features/auth/pages/profile-page';
+import { RequireAuth } from './components/auth/require-auth';
 import { Sidebar } from './components/layout/sidebar';
 import { ThemeToggle } from './components/theme-toggle'; 
 import { Toaster } from './components/ui/sonner';
@@ -39,17 +41,17 @@ function AppContent() {
             <ThemeToggle />
             </div>
             <Routes>
-            <Route path="/" element={user ? <ProjectsPage /> : <LoginPage />} />
-            <Route path="/builder/:id" element={<VisualBuilderPage />} />
-
-            <Route path="/shopping-list" element={<ShoppingListPage />} />
-            <Route path="/generate" element={<ConfigGeneratorPage />} />
-            <Route path="/admin" element={<AdminPage />} />
-            {/* Catalog routes */}
-            <Route path="/hardware" element={<HardwareCatalogPage />} />
-            <Route path="/services" element={<ServiceCatalogPage />} />
-            {/* Redirect legacy routes */}
-            <Route path="/checklist" element={<ChecklistPage />} />
+              <Route path="/" element={user ? <ProjectsPage /> : <LoginPage />} />
+              {/* Protected routes */}
+              <Route path="/builder/:id" element={<RequireAuth><VisualBuilderPage /></RequireAuth>} />
+              <Route path="/shopping-list" element={<RequireAuth><ShoppingListPage /></RequireAuth>} />
+              <Route path="/generate" element={<RequireAuth><ConfigGeneratorPage /></RequireAuth>} />
+              <Route path="/admin" element={<RequireAuth><AdminPage /></RequireAuth>} />
+              <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
+              {/* Public catalog routes */}
+              <Route path="/hardware" element={<HardwareCatalogPage />} />
+              <Route path="/services" element={<ServiceCatalogPage />} />
+              <Route path="/checklist" element={<ChecklistPage />} />
             </Routes>
         </main>
     </div>

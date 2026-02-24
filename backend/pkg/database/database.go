@@ -50,6 +50,7 @@ func Connect(cfg *config.Config) (*gorm.DB, error) {
 			&models.HardwareReview{},
 			&models.Node{},
 			&models.Edge{},
+			&models.NodeComponent{},
 			&models.ServiceInstance{},
 			&models.VirtualMachine{},
 		); err != nil {
