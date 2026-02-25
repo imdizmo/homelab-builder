@@ -168,10 +168,8 @@ func Allocate(req models.AllocateRequest) models.AllocateResponse {
 		for t, z := range DefaultDeviceZones {
 			subnetZones[t] = z
 		}
-		if zones != nil {
-			for t, z := range zones {
-				subnetZones[t] = z
-			}
+		for t, z := range zones {
+			subnetZones[t] = z
 		}
 		for t, z := range subnetZones {
 			if z.CanHostVMs {
