@@ -43,14 +43,25 @@ func Allocate(req models.AllocateRequest) models.AllocateResponse {
 
 	// ── 2. Build undirected adjacency list ──────────────────────────────────
 	// The backend already provides a bi-directional, pre-sorted adjacency list
-	// in n.Connections. We just map it directly to preserve the exact order.
+	// for nodes. We map it directly to preserve the exact order.
 	adj := make(map[string][]string, totalNodes)
+
+	isRouter := make(map[string]bool, len(req.Routers))
+	for i := range req.Routers {
+		isRouter[req.Routers[i].ID] = true
+	}
+
 	for i := range req.Nodes {
 		n := &req.Nodes[i]
 		adj[n.ID] = n.Connections
-	}
-	for i := range req.Routers {
-		_ = adj[req.Routers[i].ID]
+
+		// Routers don't have a Connections array in the DTO, so we must
+		// backfill their adjacency list using the nodes that link to them.
+		for _, neighbor := range n.Connections {
+			if isRouter[neighbor] {
+				adj[neighbor] = append(adj[neighbor], n.ID)
+			}
+		}
 	}
 
 	// ── 3. Normalise routers ────────────────────────────────────────────────
@@ -211,7 +222,7 @@ func Allocate(req models.AllocateRequest) models.AllocateResponse {
 				}
 
 				// ── Assign node IP ──
-				zone := GetZone(n.Type, zones)
+				zone := GetZone(n.Type, sa.Zones)
 				var hostOffset int
 				if n.ExistingIP != "" && utils.IsValidIPv4(n.ExistingIP) {
 					res.AssignedIP = n.ExistingIP
@@ -229,10 +240,6 @@ func Allocate(req models.AllocateRequest) models.AllocateResponse {
 					res.AssignedIP = sa.FormatIP(hostOffset)
 					sa.Reserve(hostOffset)
 				}
-
-				// Reserve the full block so the next device of the same type
-				// gets spaced properly (e.g. .180, .190, .200 instead of .180, .181, .182)
-				sa.ReserveBlock(hostOffset, zone.Step)
 
 				// ── Assign VM IPs within the host's reserved block ──
 				if zone.CanHostVMs && len(n.VMs) > 0 {
@@ -268,6 +275,10 @@ func Allocate(req models.AllocateRequest) models.AllocateResponse {
 						}
 					}
 				}
+
+				// Reserve the full block so the next device of the same type
+				// gets spaced properly (e.g. .180, .190, .200 instead of .180, .181, .182)
+				sa.ReserveBlock(hostOffset, zone.Step)
 			}
 		}
 	}

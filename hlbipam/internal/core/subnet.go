@@ -98,6 +98,12 @@ func (sa *SubnetAllocator) AllocateSlot(baseOffset int) int {
 			return offset
 		}
 	}
+	// Wrap around to beginning of the active subnet range
+	for offset := 1; offset < baseOffset; offset++ {
+		if !sa.Used[offset] {
+			return offset
+		}
+	}
 	return -1
 }
 
