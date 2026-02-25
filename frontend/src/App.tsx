@@ -23,13 +23,29 @@ const queryClient = new QueryClient();
 
 import { useLocation } from 'react-router-dom';
 import { useAuth } from './features/admin/hooks/use-auth';
+import { useTheme } from './components/theme-provider';
+import { useBuilderStore } from './features/builder/store/builder-store';
+import { useEffect } from 'react';
 
 import LoginPage from './features/auth/pages/login-page';
 
 function AppContent() {
   const location = useLocation();
   const { user } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const setEdgePreferences = useBuilderStore(s => s.setEdgePreferences);
   
+  useEffect(() => {
+    if (user?.preferences) {
+        if (user.preferences.theme && user.preferences.theme !== theme) {
+            setTheme(user.preferences.theme);
+        }
+        if (user.preferences.edgePreferences) {
+            setEdgePreferences(user.preferences.edgePreferences);
+        }
+    }
+  }, [user]);
+
   // Hide sidebar only on the "Landing/Login" page (root path) when not logged in
   const isLandingPage = !user && location.pathname === '/';
 

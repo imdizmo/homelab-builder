@@ -165,7 +165,22 @@ func (s *AuthService) UpdatePreferences(userID uuid.UUID, prefs map[string]inter
 		return nil, err
 	}
 
-	rawPrefs, err := json.Marshal(prefs)
+	// Unmarshal existing preferences to merge
+	var existingPrefs map[string]interface{}
+	if len(user.Preferences) > 0 {
+		if err := json.Unmarshal(user.Preferences, &existingPrefs); err != nil {
+			existingPrefs = make(map[string]interface{})
+		}
+	} else {
+		existingPrefs = make(map[string]interface{})
+	}
+
+	// Merge incoming prefs
+	for k, v := range prefs {
+		existingPrefs[k] = v
+	}
+
+	rawPrefs, err := json.Marshal(existingPrefs)
 	if err != nil {
 		return nil, fmt.Errorf("invalid preferences payload: %w", err)
 	}

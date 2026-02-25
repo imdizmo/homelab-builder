@@ -3,8 +3,11 @@ import {
   BaseEdge,
   EdgeLabelRenderer,
   getSmoothStepPath,
+  getBezierPath,
+  getStraightPath,
   useReactFlow,
   useInternalNode,
+  useNodes,
   type EdgeProps,
 } from '@xyflow/react';
 import { Button } from '../../../components/ui/button';
@@ -16,15 +19,16 @@ import {
 } from "../../../components/ui/popover";
 import { Label } from "../../../components/ui/label";
 import { Input } from "../../../components/ui/input";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "../../../components/ui/select";
 import { useBuilderStore } from '../store/builder-store';
 import { getEdgeParams } from './floating-edge-utils';
+import { getSmartEdge, svgDrawSmoothLinePath } from '@tisoap/react-flow-smart-edge';
  
 const SPEED_COLORS: Record<string, string> = {
   '100 MbE': '#94a3b8',   // slate-400
@@ -52,6 +56,8 @@ export function CustomEdge({
 }: EdgeProps) {
   const { deleteElements } = useReactFlow();
   const updateEdge = useBuilderStore(s => s.updateEdge);
+  const edgePreferences = useBuilderStore(s => s.edgePreferences);
+  const nodes = useNodes();
   const [isHovered, setIsHovered] = useState(false);
   
   const sourceNode = useInternalNode(source);
@@ -64,11 +70,12 @@ export function CustomEdge({
   let sourcePos = sourcePosition;
   let targetPos = targetPosition;
 
-  if (sourceNode && targetNode) {
+  // 1. Determine Logical Connection Points
+  // Floating avoids exact port handles and goes straight for the closest bounding box wall
+  if (sourceNode && targetNode && edgePreferences.connectionStyle === 'floating') {
     const params = getEdgeParams(sourceNode, targetNode);
     
-    // Only apply floating edge math if the node is NOT a switch or router
-    // This allows exact port assignment on network gear while computers float gracefully
+    // Always pin strictly on switches/routers as they have specific ETH port numbering 
     if (sourceNode.data?.type !== 'switch' && sourceNode.data?.type !== 'router') {
       sx = params.sx;
       sy = params.sy;
@@ -82,15 +89,66 @@ export function CustomEdge({
     }
   }
 
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
-    sourceX: sx,
-    sourceY: sy,
-    sourcePosition: sourcePos,
-    targetX: tx,
-    targetY: ty,
-    targetPosition: targetPos,
-    borderRadius: 15,
-  });
+  // 2. Determine the SVG line style primitive function
+  const getFallbackPathObj = () => {
+     let pathGen = getBezierPath;
+     if (edgePreferences.lineStyle === 'step') pathGen = getSmoothStepPath;
+     if (edgePreferences.lineStyle === 'straight') pathGen = getStraightPath;
+
+     const params: any = {
+        sourceX: sx,
+        sourceY: sy,
+        sourcePosition: sourcePos,
+        targetX: tx,
+        targetY: ty,
+        targetPosition: targetPos,
+     };
+     if (edgePreferences.lineStyle === 'step') params.borderRadius = 15;
+
+     const [fallbackPath, flX, flY] = pathGen(params);
+     
+     return { svgPathString: fallbackPath, edgeCenterX: flX, edgeCenterY: flY };
+  };
+
+  let finalEdgePath = '';
+  let labelX = 0;
+  let labelY = 0;
+
+  // 3. Determine if A* Node Avoidance is needed
+  if (edgePreferences.routingEngine === 'smart') {
+    // Attempt smart edge pathfinding to avoid nodes
+    const smartEdgeResponse = getSmartEdge({
+      sourceX: sx,
+      sourceY: sy,
+      sourcePosition: sourcePos,
+      targetX: tx,
+      targetY: ty,
+      targetPosition: targetPos,
+      nodes,
+      options: {
+        nodePadding: 20,
+        drawEdge: edgePreferences.lineStyle === 'bezier' ? svgDrawSmoothLinePath : undefined,
+      }
+    });
+
+    if (smartEdgeResponse instanceof Error) {
+      // Boxed in, cannot find path around nodes -> Fallback to direct path
+      const fb = getFallbackPathObj();
+      finalEdgePath = fb.svgPathString;
+      labelX = fb.edgeCenterX;
+      labelY = fb.edgeCenterY;
+    } else {
+      finalEdgePath = smartEdgeResponse.svgPathString;
+      labelX = smartEdgeResponse.edgeCenterX;
+      labelY = smartEdgeResponse.edgeCenterY;
+    }
+  } else {
+    // Direct mode (flyover edges with no collision constraints)
+    const fb = getFallbackPathObj();
+    finalEdgePath = fb.svgPathString;
+    labelX = fb.edgeCenterX;
+    labelY = fb.edgeCenterY;
+  }
  
   const onEdgeClick = (evt: React.MouseEvent) => {
     evt.stopPropagation();
@@ -116,14 +174,14 @@ export function CustomEdge({
       className="react-flow__edge-path-selector"
     >
       <path
-        d={edgePath}
+        d={finalEdgePath}
         fill="none"
         strokeOpacity={0}
         strokeWidth={20}
         className="cursor-pointer"
       />
       <BaseEdge 
-        path={edgePath} 
+        path={finalEdgePath} 
         markerEnd={markerEnd} 
         style={{
           ...style,

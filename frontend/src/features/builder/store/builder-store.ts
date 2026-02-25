@@ -62,6 +62,14 @@ interface BuilderState {
     showBought: boolean
     setShowBought: (v: boolean) => void
 
+    // Visual Preferences
+    edgePreferences: {
+        routingEngine: 'smart' | 'direct'
+        connectionStyle: 'floating' | 'strict'
+        lineStyle: 'bezier' | 'step' | 'straight'
+    }
+    setEdgePreferences: (prefs: Partial<BuilderState['edgePreferences']>) => void
+
     // Network Validation
     validationIssues: { node_id: string; message: string; type: 'error' | 'warning' }[]
     validateNetwork: () => Promise<void>
@@ -96,6 +104,11 @@ export const useBuilderStore = create<BuilderState>()(
             selectedNodeId: null,
             boughtItems: [],
             showBought: false,
+            edgePreferences: {
+                routingEngine: 'direct',
+                connectionStyle: 'strict',
+                lineStyle: 'step',
+            },
             validationIssues: [],
             availableServices: [],
             fetchServices: async () => {
@@ -106,6 +119,11 @@ export const useBuilderStore = create<BuilderState>()(
                     console.error("Failed to fetch services", e)
                 }
             },
+
+            setEdgePreferences: (prefs) => set((state) => ({
+                edgePreferences: { ...state.edgePreferences, ...prefs }
+            })),
+
             projectName: "My Homelab",
             projectThumbnail: "",
             currentBuildId: null,

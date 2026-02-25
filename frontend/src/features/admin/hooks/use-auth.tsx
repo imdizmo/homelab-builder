@@ -6,6 +6,7 @@ interface User {
     email: string;
     avatar_url?: string;
     is_admin?: boolean;
+    preferences?: Record<string, any>;
 }
 
 export function useAuth() {
@@ -51,10 +52,22 @@ export function useAuth() {
         }
     }
 
+    async function updatePreferences(prefs: Record<string, any>) {
+        if (!user) return;
+        try {
+            const updatedUser = await api.put<User>('/auth/preferences', { preferences: prefs });
+            setUser(updatedUser);
+            return updatedUser;
+        } catch (error) {
+            console.error("Failed to update preferences", error);
+        }
+    }
+
     return {
         user,
         loading,
         loginWithGoogle,
+        updatePreferences,
         logout: () => {
              localStorage.removeItem('auth_token');
              setUser(null);

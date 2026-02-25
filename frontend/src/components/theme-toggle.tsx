@@ -1,6 +1,7 @@
 import { Moon, Sun } from "lucide-react"
 import { Button } from "./ui/button"
 import { useTheme } from "./theme-provider"
+import { api } from "../lib/api"
 
 export function ThemeToggle() {
   const { setTheme, theme } = useTheme()
@@ -9,7 +10,13 @@ export function ThemeToggle() {
     <Button
       variant="ghost"
       size="icon"
-      onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+      onClick={() => {
+         const newTheme = theme === "light" ? "dark" : "light";
+         setTheme(newTheme);
+         if (localStorage.getItem('auth_token')) {
+            api.put('/auth/preferences', { preferences: { theme: newTheme } }).catch(console.error);
+         }
+      }}
       className="rounded-full"
     >
       <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />

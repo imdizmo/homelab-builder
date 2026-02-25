@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/Butterski/hlbipam/internal/models"
@@ -194,4 +195,67 @@ func findVMIPs(resp models.AllocateResponse, hostID string) []string {
 		}
 	}
 	return nil
+}
+
+func TestAllocate_24PortScale(t *testing.T) {
+	req := models.AllocateRequest{
+		Routers: []models.RouterDTO{
+			{ID: "r1", GatewayIP: "192.168.1.1", DHCPEnabled: true}, // Uses 70 IPs (.30-.99)
+		},
+		Nodes: []models.NodeDTO{
+			{ID: "sw1", Type: "switch", Connections: []string{"r1"}},
+		},
+	}
+
+	for i := 1; i <= 24; i++ {
+		req.Nodes = append(req.Nodes, models.NodeDTO{
+			ID:          fmt.Sprintf("srv%d", i),
+			Type:        "server",
+			Connections: []string{"sw1"},
+			VMs:         []models.VMDTO{{ID: fmt.Sprintf("vm%d", i)}},
+		})
+	}
+
+	resp := Allocate(req)
+
+	if len(resp.Warnings) > 0 {
+		t.Logf("Warnings generated in scale test: %v", resp.Warnings)
+	}
+
+	assignedSet := make(map[string]bool)
+	hostCount := 0
+	vmCount := 0
+
+	for _, n := range resp.Nodes {
+		if n.AssignedIP == "" {
+			t.Errorf("node %s did not get an IP", n.ID)
+		} else {
+			if assignedSet[n.AssignedIP] {
+				t.Errorf("duplicate IP assigned: %s on node %s", n.AssignedIP, n.ID)
+			}
+			assignedSet[n.AssignedIP] = true
+			if n.Type == "server" {
+				hostCount++
+			}
+		}
+
+		for _, vm := range n.VMs {
+			if vm.AssignedIP == "" {
+				t.Errorf("vm %s under host %s did not get an IP", vm.ID, n.ID)
+			} else {
+				if assignedSet[vm.AssignedIP] {
+					t.Errorf("duplicate IP assigned to VM: %s on vm %s", vm.AssignedIP, vm.ID)
+				}
+				assignedSet[vm.AssignedIP] = true
+				vmCount++
+			}
+		}
+	}
+
+	if hostCount != 24 {
+		t.Errorf("expected 24 hosts allocated, got %d", hostCount)
+	}
+	if vmCount != 24 {
+		t.Errorf("expected 24 VMs allocated, got %d", vmCount)
+	}
 }

@@ -50,3 +50,37 @@ func GetZone(deviceType string, zones map[string]ZoneConfig) ZoneConfig {
 	}
 	return FallbackZone
 }
+
+const (
+	// MaxDynamicStep is the upper bound for pool size per VM-hosting device.
+	MaxDynamicStep = 20
+	// MinDynamicStep is the lower bound — every host gets at least 1 VM slot.
+	MinDynamicStep = 2
+	// ReservedInfra is the number of addresses set aside for infrastructure
+	// (gateway, switches, APs, broadcast, etc.) when calculating dynamic steps.
+	ReservedInfra = 30
+)
+
+// CalculateDynamicStep calculates the optimal per-device pool step size based
+// on how many VM-hosting devices exist in the subnet and how much address
+// space is available. Fewer devices → bigger pools; many devices → smaller pools.
+func CalculateDynamicStep(vmHostCount int, dhcpReserved int) int {
+	if vmHostCount <= 0 {
+		return MaxDynamicStep
+	}
+
+	// Total usable addresses in a /24: 254 (1–254), minus gateway(1), broadcast is already excluded
+	usable := 254 - ReservedInfra - dhcpReserved
+	if usable < vmHostCount*MinDynamicStep {
+		return MinDynamicStep
+	}
+
+	step := usable / vmHostCount
+	if step > MaxDynamicStep {
+		return MaxDynamicStep
+	}
+	if step < MinDynamicStep {
+		return MinDynamicStep
+	}
+	return step
+}

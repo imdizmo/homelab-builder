@@ -89,6 +89,18 @@ func (sa *SubnetAllocator) ReserveBlock(start, step int) {
 	}
 }
 
+// AllocateSlot finds the first single free offset starting from baseOffset.
+// Unlike AllocateBlock, it does NOT require a contiguous block of `step` offsets.
+// Returns the offset, or -1 if the subnet is exhausted.
+func (sa *SubnetAllocator) AllocateSlot(baseOffset int) int {
+	for offset := baseOffset; offset < 255; offset++ {
+		if !sa.Used[offset] {
+			return offset
+		}
+	}
+	return -1
+}
+
 // FormatIP combines this allocator's prefix with an offset into "x.x.x.offset".
 func (sa *SubnetAllocator) FormatIP(offset int) string {
 	return utils.FormatIP(sa.Prefix, offset)

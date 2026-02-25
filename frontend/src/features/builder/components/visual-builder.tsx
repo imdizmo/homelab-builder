@@ -20,7 +20,7 @@ import { NodePropertiesPanel } from './node-properties-panel';
 import { ComponentDetailsDialog } from './component-details-dialog';
 import { LiveResourceDashboard } from './live-resource-dashboard';
 import { Button } from '../../../components/ui/button';
-import { Wand2, Menu, Save, Folder, Download, LogOut } from 'lucide-react';
+import { Wand2, Menu, Save, Folder, Download, LogOut, Route } from 'lucide-react';
 import type { HardwareType, HardwareNode } from '../../../types';
 import { buildApi } from '../api/builds';
 import { useAuth } from '../../admin/hooks/use-auth';
@@ -30,6 +30,8 @@ import {
     DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuSeparator,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
     DropdownMenuTrigger,
 } from "../../../components/ui/dropdown-menu";
 
@@ -59,7 +61,7 @@ function Flow() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
-    const { logout } = useAuth();
+    const { logout, updatePreferences } = useAuth();
 
     // Joyride Tour State
     const [runTour, setRunTour] = useState(false);
@@ -117,7 +119,9 @@ function Flow() {
         currentBuildId,
         hardwareNodes,
         projectName,
-        validateNetwork
+        validateNetwork,
+        edgePreferences,
+        setEdgePreferences
     } = useBuilderStore();
 
     const { screenToFlowPosition, getIntersectingNodes } = useReactFlow();
@@ -190,6 +194,12 @@ function Flow() {
     };
 
     const { getEdges, deleteElements } = useReactFlow();
+
+    const handlePrefChange = (key: string, val: string) => {
+        setEdgePreferences({ [key]: val });
+        // @ts-ignore - useAuth user preferences object might be untyped in this strict context
+        if (updatePreferences) updatePreferences({ edgePreferences: { ...edgePreferences, [key]: val } });
+    };
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -490,6 +500,41 @@ function Flow() {
                         <Wand2 className="mr-2 h-4 w-4" />
                         Reassign IPs
                     </Button>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-10 bg-background/80 backdrop-blur w-[150px]">
+                            <Route className="mr-2 h-4 w-4 shrink-0" />
+                            Edge Settings
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-56">
+                        
+                        <DropdownMenuLabel className="text-xs text-muted-foreground uppercase">Pathing AI</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup value={edgePreferences.routingEngine} onValueChange={(v: any) => handlePrefChange('routingEngine', v)}>
+                          <DropdownMenuRadioItem value="smart">Smart (Avoids Nodes)</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="direct">Direct (Flyover)</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                        
+                        <DropdownMenuSeparator />
+                        
+                        <DropdownMenuLabel className="text-xs text-muted-foreground uppercase">Connection Pins</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup value={edgePreferences.connectionStyle} onValueChange={(v: any) => handlePrefChange('connectionStyle', v)}>
+                          <DropdownMenuRadioItem value="floating">Floating (Chassis)</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="strict">Strict (RJ45 Port)</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+
+                        <DropdownMenuSeparator />
+                        
+                        <DropdownMenuLabel className="text-xs text-muted-foreground uppercase">Line Style</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup value={edgePreferences.lineStyle} onValueChange={(v: any) => handlePrefChange('lineStyle', v)}>
+                          <DropdownMenuRadioItem value="bezier">Bezier (Curve)</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="step">Step (Orthogonal)</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="straight">Straight (Linear)</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                        
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                 </Panel>
 
                 <Panel position="top-right" className="tour-properties">

@@ -9,6 +9,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
+	"strconv"
 	"time"
 
 	"github.com/Butterski/homelab-builder/backend/internal/models"
@@ -112,13 +114,53 @@ func (s *IPService) CalculateNetwork(buildID uuid.UUID) error {
 			return err
 		}
 
+		// Helper to extract numeric port from handle string (e.g. "eth0" -> 0, "eth10" -> 10)
+		extractPort := func(h string) int {
+			var numStr string
+			for _, c := range h {
+				if c >= '0' && c <= '9' {
+					numStr += string(c)
+				}
+			}
+			if numStr == "" {
+				return 0
+			}
+			val, _ := strconv.Atoi(numStr)
+			return val
+		}
+
 		// 2. Build adjacency from edges (as connection lists per node)
 		adj := make(map[string][]string, len(nodes))
+
+		// Map: nodeID -> neighborID -> port index
+		edgePorts := make(map[string]map[string]int, len(nodes))
+
 		for _, e := range edges {
 			src := e.SourceNodeID.String()
 			tgt := e.TargetNodeID.String()
 			adj[src] = append(adj[src], tgt)
 			adj[tgt] = append(adj[tgt], src)
+
+			if edgePorts[src] == nil {
+				edgePorts[src] = make(map[string]int)
+			}
+			if edgePorts[tgt] == nil {
+				edgePorts[tgt] = make(map[string]int)
+			}
+
+			edgePorts[src][tgt] = extractPort(e.SourceHandle)
+			edgePorts[tgt][src] = extractPort(e.TargetHandle)
+		}
+
+		// Sort adj arrays by port index. Note that React Flow edges might be drawn:
+		// Switch(ethX) -> Server(target-0) OR Server(eth0) -> Switch(target-0).
+		// We want to sort primarily by the port number ON the current node.
+		for nodeID, neighbors := range adj {
+			sort.Slice(neighbors, func(i, j int) bool {
+				p1 := edgePorts[nodeID][neighbors[i]]
+				p2 := edgePorts[nodeID][neighbors[j]]
+				return p1 < p2
+			})
 		}
 
 		// 3. Build hlbIPAM request

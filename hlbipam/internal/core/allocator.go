@@ -42,13 +42,12 @@ func Allocate(req models.AllocateRequest) models.AllocateResponse {
 	}
 
 	// ── 2. Build undirected adjacency list ──────────────────────────────────
+	// The backend already provides a bi-directional, pre-sorted adjacency list
+	// in n.Connections. We just map it directly to preserve the exact order.
 	adj := make(map[string][]string, totalNodes)
 	for i := range req.Nodes {
 		n := &req.Nodes[i]
-		for _, connID := range n.Connections {
-			adj[n.ID] = append(adj[n.ID], connID)
-			adj[connID] = append(adj[connID], n.ID)
-		}
+		adj[n.ID] = n.Connections
 	}
 	for i := range req.Routers {
 		_ = adj[req.Routers[i].ID]
@@ -131,7 +130,46 @@ func Allocate(req models.AllocateRequest) models.AllocateResponse {
 			dhcpEnd = DefaultDHCPEnd
 		}
 
-		sa := NewSubnetAllocator(r.GatewayIP, zones, dhcpStart, dhcpEnd)
+		// Seed existing IPs that belong to this subnet
+
+		// ── Pre-pass: count VM-hosting devices for dynamic pool sizing ──
+		// We need to know how many hosts will need IP pools so we can
+		// size them dynamically (fewer hosts → bigger pools).
+		vmHostCount := 0
+		for i := range req.Nodes {
+			n := &req.Nodes[i]
+			if NonNetworkTypes[n.Type] {
+				continue
+			}
+			zone := GetZone(n.Type, zones)
+			if zone.CanHostVMs {
+				vmHostCount++
+			}
+		}
+		dhcpSize := 0
+		if r.DHCPEnabled {
+			dhcpSize = DefaultDHCPEnd - DefaultDHCPStart + 1
+		}
+		dynamicStep := CalculateDynamicStep(vmHostCount, dhcpSize)
+
+		// Create a local subnet-specific copy of the zones map with dynamic steps applied
+		subnetZones := make(map[string]ZoneConfig)
+		for t, z := range DefaultDeviceZones {
+			subnetZones[t] = z
+		}
+		if zones != nil {
+			for t, z := range zones {
+				subnetZones[t] = z
+			}
+		}
+		for t, z := range subnetZones {
+			if z.CanHostVMs {
+				z.Step = dynamicStep
+				subnetZones[t] = z
+			}
+		}
+
+		sa := NewSubnetAllocator(r.GatewayIP, subnetZones, dhcpStart, dhcpEnd)
 
 		// Seed existing IPs that belong to this subnet
 		for _, pr := range preReserves {
@@ -173,52 +211,62 @@ func Allocate(req models.AllocateRequest) models.AllocateResponse {
 				}
 
 				// ── Assign node IP ──
+				zone := GetZone(n.Type, zones)
+				var hostOffset int
 				if n.ExistingIP != "" && utils.IsValidIPv4(n.ExistingIP) {
 					res.AssignedIP = n.ExistingIP
+					hostOffset = utils.ParseLastOctet(n.ExistingIP)
+					sa.Reserve(hostOffset)
 				} else {
-					zone := GetZone(n.Type, zones)
-					blockStart := sa.AllocateBlock(zone.BaseOffset, zone.Step)
-					if blockStart < 0 {
+					hostOffset = sa.AllocateSlot(zone.BaseOffset)
+					if hostOffset < 0 {
 						resp.Warnings = append(resp.Warnings, models.Issue{
 							NodeID:  n.ID,
 							Message: fmt.Sprintf("subnet %s.0/24 exhausted for type %q (zone base=%d)", sa.Prefix, n.Type, zone.BaseOffset),
 						})
 						continue
 					}
-					res.AssignedIP = sa.FormatIP(blockStart)
-					sa.Reserve(blockStart)
+					res.AssignedIP = sa.FormatIP(hostOffset)
+					sa.Reserve(hostOffset)
+				}
 
-					// ── Assign VM IPs within the host block ──
-					if zone.CanHostVMs && len(n.VMs) > 0 {
-						vmSlot := 1
-						for j := range n.VMs {
-							vm := &n.VMs[j]
-							if vm.ExistingIP != "" && utils.IsValidIPv4(vm.ExistingIP) {
-								res.VMs[j].AssignedIP = vm.ExistingIP
-								continue
+				// Reserve the full block so the next device of the same type
+				// gets spaced properly (e.g. .180, .190, .200 instead of .180, .181, .182)
+				sa.ReserveBlock(hostOffset, zone.Step)
+
+				// ── Assign VM IPs within the host's reserved block ──
+				if zone.CanHostVMs && len(n.VMs) > 0 {
+					for j := range n.VMs {
+						vm := &n.VMs[j]
+						if vm.ExistingIP != "" && utils.IsValidIPv4(vm.ExistingIP) {
+							res.VMs[j].AssignedIP = vm.ExistingIP
+							sa.Reserve(utils.ParseLastOctet(vm.ExistingIP))
+							continue
+						}
+						// Try within the reserved block first [hostOffset+1 .. hostOffset+step-1]
+						assigned := false
+						for slot := hostOffset + 1; slot < hostOffset+zone.Step && slot < 255; slot++ {
+							if sa.IsAvailable(slot) {
+								res.VMs[j].AssignedIP = sa.FormatIP(slot)
+								sa.Reserve(slot)
+								assigned = true
+								break
 							}
-							assigned := false
-							for ; vmSlot < zone.Step; vmSlot++ {
-								candidate := blockStart + vmSlot
-								if sa.IsAvailable(candidate) {
-									res.VMs[j].AssignedIP = sa.FormatIP(candidate)
-									sa.Reserve(candidate)
-									vmSlot++
-									assigned = true
-									break
-								}
-							}
-							if !assigned {
+						}
+						// Fallback: find any free slot if block is full
+						if !assigned {
+							vmOffset := sa.AllocateSlot(hostOffset + 1)
+							if vmOffset < 0 {
 								resp.Warnings = append(resp.Warnings, models.Issue{
 									NodeID:  vm.ID,
-									Message: fmt.Sprintf("no free VM slot in block %d–%d for host %s", blockStart, blockStart+zone.Step-1, n.ID),
+									Message: fmt.Sprintf("subnet exhausted, no free slot for VM on host %s", n.ID),
 								})
+							} else {
+								res.VMs[j].AssignedIP = sa.FormatIP(vmOffset)
+								sa.Reserve(vmOffset)
 							}
 						}
 					}
-
-					// Seal the rest of the block
-					sa.ReserveBlock(blockStart, zone.Step)
 				}
 			}
 		}
