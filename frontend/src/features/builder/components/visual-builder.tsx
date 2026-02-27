@@ -47,7 +47,7 @@ const edgeTypes = {
 
 function ShortcutHints() {
     return (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur border text-[10px] text-muted-foreground shadow-sm pointer-events-none select-none">
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 px-3 py-1.5 rounded-full bg-card border border-border text-[10px] text-muted-foreground pointer-events-none select-none">
             <span><kbd className="font-mono bg-muted px-1 rounded">Del</kbd> delete</span>
             <span className="opacity-30">·</span>
             <span><kbd className="font-mono bg-muted px-1 rounded">Ctrl+D</kbd> duplicate</span>
@@ -453,13 +453,13 @@ function Flow() {
                     snapToGrid={true}
                     snapGrid={[20, 20]}
                 >
-                    <Background gap={20} size={1} color="#A1A1AA" style={{ opacity: 0.08 }} />
+                    <Background gap={20} size={1} color="#A1A1AA" style={{ opacity: 0.25 }} />
                     <Controls />
                     
                     <Panel position="top-left" className="flex gap-2 items-center">
                      <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="icon" className="h-10 w-10 bg-background/80 backdrop-blur">
+                            <Button variant="outline" size="icon" className="h-10 w-10 bg-card">
                                 <Menu className="h-5 w-5" />
                             </Button>
                         </DropdownMenuTrigger>
@@ -496,14 +496,14 @@ function Flow() {
                         </span>
                     </div>
 
-                    <Button variant="secondary" onClick={() => reassignAllIPs()} title="Fix IP Conflicts" size="sm" className="h-10 bg-background/80 backdrop-blur ml-4">
+                    <Button variant="secondary" onClick={() => reassignAllIPs()} title="Fix IP Conflicts" size="sm" className="h-10 bg-card ml-4">
                         <Wand2 className="mr-2 h-4 w-4" />
                         Reassign IPs
                     </Button>
 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-10 bg-background/80 backdrop-blur w-[150px]">
+                        <Button variant="outline" size="sm" className="h-10 bg-card w-[150px]">
                             <Route className="mr-2 h-4 w-4 shrink-0" />
                             Edge Settings
                         </Button>

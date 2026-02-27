@@ -12,7 +12,7 @@ interface ServiceCardProps {
 
 export function ServiceCard({ service, onSelect, isSelected }: ServiceCardProps) {
   return (
-    <Card className={`flex flex-col h-full transition-all hover:shadow-md ${isSelected ? 'ring-2 ring-primary border-primary' : ''}`}>
+    <Card className={`flex flex-col h-full transition-all ${isSelected ? 'ring-2 ring-primary border-primary' : ''}`}>
       <CardHeader>
         <div className="flex justify-between items-start">
           <CardTitle className="text-lg">{service.name}</CardTitle>

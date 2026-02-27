@@ -20,23 +20,23 @@ type HardwareNodeData = {
 }
 
 // ─── Per-type icon + color ─────────────────────────────────────────────────────
-const TYPE_CONFIG: Partial<Record<HardwareType, { icon: React.ElementType; border: string; bg: string; iconColor: string }>> = {
-    router:       { icon: Router,      border: 'border-purple-500',  bg: 'bg-purple-500/10',  iconColor: 'text-purple-400' },
-    switch:       { icon: CircuitBoard,border: 'border-blue-500',    bg: 'bg-blue-500/10',    iconColor: 'text-blue-400' },
-    server:       { icon: Server,      border: 'border-orange-500',  bg: 'bg-orange-500/10',  iconColor: 'text-orange-400' },
-    nas:          { icon: HardDrive,   border: 'border-green-500',   bg: 'bg-green-500/10',   iconColor: 'text-green-400' },
-    pc:           { icon: Monitor,     border: 'border-cyan-500',    bg: 'bg-cyan-500/10',    iconColor: 'text-cyan-400' },
-    minipc:       { icon: Monitor,     border: 'border-sky-500',     bg: 'bg-sky-500/10',     iconColor: 'text-sky-400' },
-    sbc:          { icon: Cpu,         border: 'border-lime-500',    bg: 'bg-lime-500/10',    iconColor: 'text-lime-400' },
-    access_point: { icon: Wifi,        border: 'border-yellow-500',  bg: 'bg-yellow-500/10',  iconColor: 'text-yellow-400' },
-    gpu:          { icon: Layers,      border: 'border-pink-500',    bg: 'bg-pink-500/10',    iconColor: 'text-pink-400' },
-    hba:          { icon: Plug,        border: 'border-indigo-500',  bg: 'bg-indigo-500/10',  iconColor: 'text-indigo-400' },
-    disk:         { icon: HardDrive,  border: 'border-gray-500',    bg: 'bg-gray-500/10',    iconColor: 'text-gray-400' },
-    ups:          { icon: Battery,     border: 'border-emerald-500', bg: 'bg-emerald-500/10', iconColor: 'text-emerald-400' },
-    pcie:         { icon: Plug,        border: 'border-violet-500',  bg: 'bg-violet-500/10',  iconColor: 'text-violet-400' },
-    pdu:          { icon: Plug,        border: 'border-rose-500',    bg: 'bg-rose-500/10',    iconColor: 'text-rose-400' },
+const TYPE_CONFIG: Partial<Record<HardwareType, { icon: React.ElementType; border: string; bg: string; iconColor: string; color: string }>> = {
+    router:       { icon: Router,      border: 'border-border',  bg: 'bg-purple-500',  iconColor: 'text-purple-400', color: '#a855f7' },
+    switch:       { icon: CircuitBoard,border: 'border-border',  bg: 'bg-blue-500',    iconColor: 'text-blue-400',   color: '#3b82f6' },
+    server:       { icon: Server,      border: 'border-border',  bg: 'bg-orange-500',  iconColor: 'text-orange-400', color: '#f97316' },
+    nas:          { icon: HardDrive,   border: 'border-border',  bg: 'bg-green-500',   iconColor: 'text-green-400',  color: '#22c55e' },
+    pc:           { icon: Monitor,     border: 'border-border',  bg: 'bg-cyan-500',    iconColor: 'text-cyan-400',   color: '#06b6d4' },
+    minipc:       { icon: Monitor,     border: 'border-border',  bg: 'bg-sky-500',     iconColor: 'text-sky-400',    color: '#0ea5e9' },
+    sbc:          { icon: Cpu,         border: 'border-border',  bg: 'bg-lime-500',    iconColor: 'text-lime-400',   color: '#84cc16' },
+    access_point: { icon: Wifi,        border: 'border-border',  bg: 'bg-yellow-500',  iconColor: 'text-yellow-400', color: '#eab308' },
+    gpu:          { icon: Layers,      border: 'border-border',  bg: 'bg-pink-500',    iconColor: 'text-pink-400',   color: '#ec4899' },
+    hba:          { icon: Plug,        border: 'border-border',  bg: 'bg-indigo-500',  iconColor: 'text-indigo-400', color: '#6366f1' },
+    disk:         { icon: HardDrive,  border: 'border-border',  bg: 'bg-gray-500',    iconColor: 'text-gray-400',   color: '#6b7280' },
+    ups:          { icon: Battery,     border: 'border-border',  bg: 'bg-emerald-500', iconColor: 'text-emerald-400',color: '#10b981' },
+    pcie:         { icon: Plug,        border: 'border-border',  bg: 'bg-violet-500',  iconColor: 'text-violet-400', color: '#8b5cf6' },
+    pdu:          { icon: Plug,        border: 'border-border',  bg: 'bg-rose-500',    iconColor: 'text-rose-400',   color: '#f43f5e' },
 }
-const FALLBACK_CONFIG = { icon: Server, border: 'border-gray-500', bg: 'bg-gray-500/10', iconColor: 'text-gray-400' }
+const FALLBACK_CONFIG = { icon: Server, border: 'border-border', bg: 'bg-gray-500', iconColor: 'text-gray-400', color: '#6b7280' }
 
 // ─── VM chip ───────────────────────────────────────────────────────────────────
 const VM_TYPE_ICON: Record<string, React.ElementType> = {
@@ -166,27 +166,31 @@ export const HardwareNode = memo(({ id, data, selected }: NodeProps) => {
 
     return (
         <div className="relative group">
-            {/* Spotlight Effect for selected nodes */}
+            {/* Animated ring on selection — uses device accent color */}
             {selected && (
-                <div className={cn("absolute -inset-16 -z-10 rounded-full blur-3xl opacity-20 pointer-events-none", cfg.bg.replace('/10', ''))} />
+                <div
+                    className="absolute -inset-[3px] -z-10 rounded-[14px] pointer-events-none node-selected-ring"
+                    style={{ '--node-accent': cfg.color } as React.CSSProperties}
+                />
             )}
             
             <Card 
                 className={cn(
-                    'transition-all duration-200 border shadow-none bg-card overflow-hidden',
+                    'transition-all duration-200 ease-out border shadow-none bg-card overflow-hidden border-t-2',
                     (hasVMs || hasComponents) ? 'w-56' : 'w-48',
                     hasWarning ? 'border-destructive' : 'border-border',
                     hasIpError ? 'border-destructive bg-destructive/5' : '',
-                    selected ? 'border-primary scale-[1.02]' : 'hover:border-primary/50'
+                    selected ? 'scale-[1.02]' : 'hover:border-primary/50'
                 )}
-                style={dynamicMinWidth > 192 ? { minWidth: `${dynamicMinWidth}px` } : undefined}
+                style={{ 
+                    borderTopColor: cfg.color,
+                    ...(dynamicMinWidth > 192 ? { minWidth: `${dynamicMinWidth}px` } : {})
+                }}
             >
-                {/* Thin top colored indicator line */}
-                <div className={cn("absolute top-0 left-0 right-0 h-[2px]", cfg.bg.replace('/10', ''))} />
 
                 {/* Header */}
                 <div className={cn(
-                    'px-3 py-2 flex items-center gap-2 border-b border-border bg-background/50 backdrop-blur-sm',
+                    'px-3 py-2 flex items-center gap-2 border-b border-border bg-card',
                     hasWarning ? 'bg-destructive/10' : (selected ? 'bg-primary/5' : '')
                 )}>
                     <Icon className={cn('h-4 w-4 shrink-0', cfg.iconColor)} />
@@ -208,7 +212,7 @@ export const HardwareNode = memo(({ id, data, selected }: NodeProps) => {
 
                 {/* Body */}
                 {(nodeData.details?.model || !NON_NETWORK_TYPES.includes(nodeData.type) || hasComponents || hasVMs || nodeData.details?.cpu || nodeData.details?.ram) && (
-                    <div className="p-2.5 bg-background/80 backdrop-blur-sm space-y-1.5">
+                    <div className="p-2.5 bg-card space-y-1.5">
                         {/* Model subtitle */}
                         {nodeData.details?.model && (
                             <p className="text-[9px] text-muted-foreground/70 truncate -mt-0.5">{nodeData.details.model}</p>

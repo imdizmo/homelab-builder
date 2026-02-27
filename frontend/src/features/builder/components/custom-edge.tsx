@@ -216,7 +216,7 @@ export function CustomEdge({
           onMouseLeave={() => setIsHovered(false)}
         >
           {/* Always show the speed/subnet badge if configured, or on hover */}
-          <div className={`px-1.5 py-0.5 rounded text-[9px] font-mono bg-background border shadow-sm transition-opacity ${(!isHovered && !selected && speed === '1 GbE' && !subnet) ? 'opacity-0' : 'opacity-100'}`}>
+          <div className={`px-1.5 py-0.5 rounded text-[9px] font-mono bg-background border transition-opacity ${(!isHovered && !selected && speed === '1 GbE' && !subnet) ? 'opacity-0' : 'opacity-100'}`}>
             <span className="text-primary font-semibold">{speed}</span>
             {subnet && <span className="ml-1 text-muted-foreground">({subnet})</span>}
           </div>
@@ -229,7 +229,7 @@ export function CustomEdge({
                 <Button
                   variant="ghost" 
                   size="icon"
-                  className="h-6 w-6 rounded-full bg-background border shadow-sm transition-all text-muted-foreground hover:text-foreground hover:bg-muted"
+                  className="h-6 w-6 rounded-full bg-background border transition-all text-muted-foreground hover:text-foreground hover:bg-muted"
                   title="Configure Connection"
                 >
                   <Settings2 className="h-3 w-3" />
@@ -272,7 +272,7 @@ export function CustomEdge({
             <Button
               variant="ghost" 
               size="icon"
-              className="h-6 w-6 rounded-full bg-background border shadow-sm hover:bg-destructive hover:text-destructive-foreground active:scale-95 transition-all text-muted-foreground"
+              className="h-6 w-6 rounded-full bg-background border hover:bg-destructive hover:text-destructive-foreground active:scale-95 transition-all text-muted-foreground"
               onClick={onEdgeClick}
               title="Delete Connection"
             >

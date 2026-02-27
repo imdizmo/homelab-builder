@@ -320,7 +320,7 @@ export default function ProjectsPage() {
                         return (
                             <Card 
                                 key={build.id} 
-                                className="group cursor-pointer hover:border-primary/50 transition-all hover:shadow-md overflow-hidden flex flex-col"
+                                className="group cursor-pointer hover:border-primary/50 transition-all overflow-hidden flex flex-col"
                                 onClick={() => handleOpen(build)}
                             >
                                 <div className="aspect-video bg-muted/30 relative border-b flex items-center justify-center group-hover:bg-muted/50 transition-colors">

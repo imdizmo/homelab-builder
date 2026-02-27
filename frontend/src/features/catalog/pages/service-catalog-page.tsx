@@ -23,7 +23,7 @@ function ServiceCard({ item, isFavorite, selectionId }: { item: Service, isFavor
     const tagsArray: string[] = Array.isArray(item.tags) ? item.tags : (typeof item.tags === 'string' ? JSON.parse(item.tags || '[]') : [])
 
     return (
-        <div className="group rounded-xl border bg-card hover:border-primary/40 hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col h-full">
+        <div className="group rounded-xl border bg-card hover:border-primary/40 transition-all duration-200 overflow-hidden flex flex-col h-full">
             <div className="p-4 flex items-start gap-4 flex-1">
                 <div className="p-2.5 rounded-lg shrink-0 text-blue-500 bg-blue-500/10">
                     <Package className="h-6 w-6" />

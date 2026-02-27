@@ -54,7 +54,7 @@ export default function ProfilePage() {
                     <div className="h-24 bg-gradient-to-br from-primary/30 via-primary/10 to-background" />
                     <CardContent className="pt-0 pb-6 relative">
                         <div className="flex items-end gap-4 -mt-12">
-                            <div className="rounded-full border-4 border-background shadow-lg overflow-hidden h-20 w-20 shrink-0 bg-muted">
+                            <div className="rounded-full border-4 border-background overflow-hidden h-20 w-20 shrink-0 bg-muted">
                                 <img
                                     src={avatarUrl}
                                     alt={user?.name}

@@ -14,7 +14,7 @@ export default function LoginPage() {
                 Design, plan, and generate configuration for your dream homelab in minutes.
             </p>
 
-            <div className="w-full max-w-sm bg-card border rounded-xl p-8 shadow-sm">
+            <div className="w-full max-w-sm bg-card border rounded-xl p-8">
                 <h2 className="font-semibold text-lg mb-6">Sign in to continue</h2>
                 <div className="flex justify-center">
                     <GoogleLoginButton />

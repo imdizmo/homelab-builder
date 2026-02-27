@@ -45,7 +45,7 @@ export default function AdminPage() {
             key={t}
             onClick={() => setTab(t)}
             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize ${
-              tab === t ? "bg-background shadow-sm" : "hover:bg-muted"
+              tab === t ? "bg-background" : "hover:bg-muted"
             }`}
           >
             {t === "services" ? "Service Catalog" : t === "hardware" ? "Commmunity Hardware" : t === "links" ? "Buy Links (Affiliate)" : t === "steering" ? "Store Steering" : "Component Planner"}

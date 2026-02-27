@@ -39,7 +39,7 @@ export default function RecommendationsPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
       {/* Header / Insights Toggle */}
-      <div className="border-b bg-background/95 backdrop-blur z-10 shrink-0">
+      <div className="border-b bg-card z-10 shrink-0">
           <div className="flex items-center justify-between p-4 max-w-7xl mx-auto w-full">
             <div>
                 <h1 className="text-lg font-bold tracking-tight flex items-center gap-2">

@@ -1,33 +1,47 @@
-# Dokumentacja Redesignu UI/UX: Homelab Builder
-**Cel:** Przejście z surowego, inżynieryjnego wyglądu na nowoczesny, luksusowy interfejs w stylu Web3 Pro-Tool (tzw. "Solid & Precise"). 
-**Główna zasada:** ZERO glassmorphismu. Skupiamy się na matowych powierzchniach, ostrych detalach, mikroskopijnych ramkach i doskonałej typografii.
+<system_role>
+Act as an Expert Frontend Engineer and Elite UI/UX Designer specializing in premium, highly technical web applications and Pro-Tools. 
+</system_role>
 
-## 1. Węzły / Karty Urządzeń (Nodes)
-Obecne, grube i jaskrawe obramowania należy całkowicie usunąć. Karta ma wyglądać jak precyzyjnie wycięty kawałek ciemnego metalu.
-* **Tło:** Jednolity, nieprzezroczysty i bardzo ciemny grafit/czerń (np. `#111113` lub `#18181B`).
-* **Obramowanie (Border):** Ekstremalnie cienka, 1-pikselowa ramka w kolorze bardzo delikatnej szarości (np. `rgba(255, 255, 255, 0.08)` lub `#27272A`).
-* **Wskaźnik statusu:** Zamiast obrysowywać całą kartę kolorem, zastosuj tylko jeden z poniższych akcentów:
-    * Cienki (2px) pasek koloru (np. zielony dla działającego, czerwony dla błędu) wyłącznie na górnej krawędzi karty (`border-top`).
-    * Świecąca, mała kropka (LED dot) obok nazwy urządzenia.
-* **Cienie:** Brak klasycznych cieni (Drop Shadow) podnoszących element. Karta ma leżeć "płasko".
+<task_instructions>
+Your task is to implement the frontend UI/UX redesign for the "Homelab Builder" application based on the design specification provided below. 
 
-## 2. Przestrzeń Robocza i Oświetlenie (Canvas & Lighting)
-* **Tło aplikacji (Background):** Bardzo głęboki odcień (np. `#0B0B0E`), unikamy absolutnej czerni (`#000000`).
-* **Siatka (Grid):** Punkty siatki muszą mieć drastycznie zmniejszoną widoczność (opacity na poziomie 5-8%). Mają stanowić ledwo zauważalną teksturę.
-* **Oświetlenie (Spotlight Effect):** Zamiast cieni na kartach, wygeneruj delikatny, promienisty gradient (Radial Gradient) na tle roboczym, dokładnie *pod* aktywnymi węzłami. Karta powinna wyglądać, jakby rzucała na płótno własne, bardzo rozmyte światło w kolorze swojego statusu.
+Before writing the code, carefully consider and evaluate the constraints. Output a brief, step-by-step architectural plan for the components. Once the plan is established, provide the clean, modular frontend code (e.g., React/Vue components and CSS). Do not output unnecessary intermediate reasoning or filler text.
+</task_instructions>
 
-## 3. Połączenia i Routing (Circuit Board Style)
-Obecne ukośne, kropkowane linie należy zastąpić precyzyjnym routingiem.
-* **Styl linii (Orthogonal Routing):** Linie mogą załamywać się **tylko pod kątem prostym** (90 stopni).
-* **Narożniki:** Załamania linii muszą być zaokrąglone (corner radius ok. 8px - 12px), co przypomina ścieżki na nowoczesnej płycie głównej.
-* **Wygląd linii:** Linia bazowa powinna być ciągła, cienka (1px lub 2px) i ciemnoszara (`#3F3F46`).
-* **Animacja przepływu (Data Flow):** Na liniach bazowych nałóż animowane, jasne segmenty (dashes), które płynnie przesuwają się w kierunku przepływu danych.
+<implementation_guidelines>
+- Architecture: Use a modular, component-driven approach. 
+- Styling: Use modern CSS practices (CSS variables, Flexbox/Grid). 
+- Consistency: The final design must feel singular and cohesive. Commit entirely to the "Solid & Precise" aesthetic.
+- Negative Constraint Enforcement: ABSOLUTELY ZERO glassmorphism. Do not use backdrop-blur, frosted glass effects, or semi-transparent layered backgrounds. Use exclusively solid, opaque, matte materials.
+- If I describes something that is not in the app ignore it, note it in the separate need_to_implement.md file. 
+</implementation_guidelines>
 
-## 4. Układ i Panele Boczne (Layout & UI Controls)
-* **Flat & Bordered:** Panele boczne i górny pasek narzędzi (np. "Library", "Resource Usage") muszą być całkowicie płaskie.
-* **Separacja:** Oddziel panele od płótna (canvas) wyłącznie ostrą, jednopikselową linią (`border-right`, `border-bottom` w kolorze np. `#27272A`). Nie używaj tu żadnych cieni (box-shadow).
+<design_specification>
+# UI/UX Redesign Documentation: Homelab Builder
 
-## 5. Typografia
-Hierarchia tekstu musi opierać się na drastycznym kontraście.
-* **Etykiety (Labels):** Teksty takie jak "IP:", "Cores:" powinny być małe (np. 11-12px), w kolorze zgaszonej szarości (`#A1A1AA`) i napisane nowoczesnym, geometrycznym fontem bezszeryfowym (np. *Inter*, *Geist* lub *Plus Jakarta Sans*).
-* **Wartości (Values):** Dane techniczne (np. `192.168.1.108`) muszą być jasnobiałe (`#FAFAFA`) i napisane krojem typu monospaced (np. *JetBrains Mono* lub *Fira Code*). To nada interfejsowi technicznego, hackerskiego sznytu w wydaniu premium.
+**Objective:** Transition from a raw, engineering-focused look to a modern, luxurious interface in the style of a Web3 Pro-Tool (the "Solid & Precise" aesthetic).
+**Core Principle:** ZERO glassmorphism. The focus is strictly on matte surfaces, sharp details, microscopic bezels/borders, and perfect typography.
+
+## 1. Nodes / Device Cards
+The current thick and bright borders must be completely removed. The card should look like a precisely cut piece of dark metal.
+* **Background:** Solid, completely opaque, and very dark graphite/black (e.g., `#111113` or `#18181B`).
+* **Border:** Extremely thin, 1-pixel border in a very subtle gray (e.g., `rgba(255, 255, 255, 0.08)` or `#27272A`).
+* **Status Indicator:** Instead of outlining the entire card with color, apply only one of the following accents:
+    * A thin (2px) strip of color (e.g., green for running, red for error) exclusively on the top edge of the card (`border-top`).
+    * A glowing, small dot (LED dot) next to the device name.
+* **Shadows:** No classic drop shadows that elevate the element. The card must lie completely "flat".
+
+## 2. Workspace Canvas & Lighting
+* **App Background:** A very deep shade (e.g., `#0B0B0E`), avoiding absolute black (`#000000`).
+* **Grid:** Grid points must have drastically reduced visibility (opacity around 5-8%). They should form a barely noticeable texture.
+* **Lighting (Spotlight Effect):** Instead of shadows on the cards, generate a subtle, radial gradient on the canvas background, positioned exactly *underneath* the active nodes. The card should look as if it's casting its own highly diffused light onto the canvas in the color of its status.
+
+## 3. Layout & UI Controls (Side Panels)
+* **Flat & Bordered:** Side panels and the top toolbar (e.g., "Library", "Resource Usage") must be completely flat.
+* **Separation:** Separate panels from the canvas using only a sharp, one-pixel line (`border-right`, `border-bottom` in a color like `#27272A`). Do not use any box-shadows here.
+
+## 4. Typography
+Text hierarchy must rely on dramatic contrast.
+* **Labels:** Texts like "IP:", "Cores:" should be small (e.g., 11-12px), in a muted gray (`#A1A1AA`), and use a modern, geometric sans-serif font (e.g., *Inter*, *Geist*, or *Plus Jakarta Sans*).
+* **Values:** Technical data (e.g., `192.168.1.108`) must be bright white (`#FAFAFA`) and use a monospaced font (e.g., *JetBrains Mono* or *Fira Code*). This will give the interface a premium, technical, hacker aesthetic.
+</design_specification>

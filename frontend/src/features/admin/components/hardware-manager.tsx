@@ -221,7 +221,7 @@ export function AdminHardwareManager() {
                         <button
                             key={t}
                             onClick={() => setTab(t)}
-                            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors capitalize ${tab === t ? "bg-background shadow-sm" : "hover:bg-muted"}`}
+                            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors capitalize ${tab === t ? "bg-background" : "hover:bg-muted"}`}
                         >
                             {t}
                             {t === "pending" && pendingCount > 0 && (

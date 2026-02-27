@@ -187,7 +187,7 @@ export default function ChecklistPage() {
             const Icon = step.icon;
 
             return (
-                <Card key={step.id} className={`overflow-hidden transition-all duration-200 ${isExpanded ? 'border-primary/50 shadow-md ring-1 ring-primary/10' : 'hover:border-primary/30'}`}>
+                <Card key={step.id} className={`overflow-hidden transition-all duration-200 ${isExpanded ? 'border-primary/50' : 'hover:border-primary/30'}`}>
                     <div 
                         className="flex items-center justify-between p-5 cursor-pointer select-none bg-card hover:bg-muted/30 transition-colors"
                         onClick={() => toggleStep(step.id)}

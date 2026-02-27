@@ -9,7 +9,7 @@
 /* Sidebar */
 .sidebar {
   width: var(--sidebar-width);
-  background-color: white;
+  background-color: var(--background);
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
@@ -100,8 +100,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: 2px solid white;
-  box-shadow: var(--shadow-sm);
+  border: 2px solid var(--background);
 }
 
 .user-info {
@@ -135,7 +134,7 @@
 
 .top-bar {
   height: var(--header-height);
-  background-color: white;
+  background-color: var(--background);
   border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;

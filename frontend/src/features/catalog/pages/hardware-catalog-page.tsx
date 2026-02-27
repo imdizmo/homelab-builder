@@ -95,8 +95,8 @@ function SubmitHardwareModal({ onClose }: { onClose: () => void }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative z-10 w-full max-w-lg rounded-2xl border bg-card shadow-2xl">
+            <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+            <div className="relative z-10 w-full max-w-lg rounded-2xl border bg-card">
                 <div className="flex items-center justify-between border-b px-6 py-4">
                     <div>
                         <h2 className="text-lg font-semibold">Submit Hardware</h2>
@@ -237,7 +237,7 @@ function HardwareCard({ item }: { item: HardwareComponent }) {
     }
 
     return (
-        <div className="group rounded-xl border bg-card hover:border-primary/40 hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col">
+        <div className="group rounded-xl border bg-card hover:border-primary/40 transition-all duration-200 overflow-hidden flex flex-col">
             <div className="p-4 flex items-start gap-3">
                 <div className={`p-2.5 rounded-lg shrink-0 ${meta.color}`}>
                     <Icon className="h-5 w-5" />
@@ -404,7 +404,7 @@ export default function HardwareCatalogPage() {
                     <p className="text-muted-foreground text-sm">Try adjusting your filters</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 stagger-children">
                     {items.map(item => <HardwareCard key={item.id} item={item} />)}
                 </div>
             )}

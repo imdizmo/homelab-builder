@@ -32,10 +32,11 @@ export function BuilderPanel() {
   const maxRam = 64 * 1024
   const maxStorage = 4000
 
+  const sidebarCollapsed = (() => { try { return localStorage.getItem('sidebar-collapsed') === 'true' } catch { return false } })()
   const totalVMs = hardwareNodes.reduce((acc, node) => acc + (node.vms?.length || 0), 0)
 
   return (
-    <div className="fixed bottom-0 left-0 md:left-64 right-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 shadow-lg z-40 animate-in slide-in-from-bottom">
+    <div className={`fixed bottom-0 left-0 right-0 border-t border-border bg-card p-4 z-40 animate-in slide-in-from-bottom transition-all duration-300 ${sidebarCollapsed ? 'md:left-16' : 'md:left-64'}`}>
       <div className="container flex flex-col md:flex-row items-center justify-between gap-4">
         
         <div className="grid grid-cols-3 gap-8 w-full md:w-auto flex-1">

@@ -187,7 +187,7 @@ export function NodePropertiesPanel() {
     const hasWarning = cpuWarning || ramWarning;
 
     return (
-        <Card className="absolute top-4 right-4 w-80 shadow-xl z-10 border-l animate-in slide-in-from-right-10 bg-background/95 backdrop-blur max-h-[calc(100vh-6rem)] flex flex-col">
+        <Card className="absolute top-4 right-4 w-80 shadow-none z-10 border-l animate-in slide-in-from-right-10 bg-card max-h-[calc(100vh-6rem)] flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between py-3 bg-muted/50 border-b shrink-0">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                     Node Properties

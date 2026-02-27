@@ -22,15 +22,13 @@
 .btn-primary {
   background-color: var(--color-primary);
   color: white;
-  box-shadow: var(--shadow-sm);
 }
 .btn-primary:hover:not(:disabled) { background-color: var(--color-primary-hover); }
 
 .btn-secondary {
-  background-color: white;
+  background-color: var(--card);
   border-color: var(--color-border);
   color: var(--color-text-secondary);
-  box-shadow: var(--shadow-sm);
 }
 .btn-secondary:hover:not(:disabled) {
   background-color: var(--color-bg-subtle);
@@ -66,7 +64,6 @@
   background-color: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
@@ -120,16 +117,15 @@
   font-size: 0.875rem;
   line-height: 1.5;
   color: var(--color-text);
-  background-color: white;
+  background-color: var(--card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s;
 }
 
 .input:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
 .label {

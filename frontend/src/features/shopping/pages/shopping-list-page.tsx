@@ -31,8 +31,8 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
 // Confirmation dialog after clicking Buy
 function BuyConfirmDialog({ itemName, onBought, onClose }: { itemName: string; onBought: () => void; onClose: () => void }) {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-            <div className="bg-card border rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+            <div className="bg-card border rounded-xl p-6 max-w-sm w-full mx-4 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
                 <h3 className="font-bold text-lg mb-1">Did you order it?</h3>
                 <p className="text-muted-foreground text-sm mb-5">
                     Mark <span className="font-semibold text-foreground">"{itemName}"</span> as bought to track your progress and hide it from the list.
@@ -112,7 +112,7 @@ export default function ShoppingListPage() {
             <p className="text-muted-foreground">Recommended hardware based on your Visual Builder design.</p>
         </div>
         <div className="flex items-center gap-3">
-            <div className="flex items-center border rounded-md bg-background px-3 py-1.5 shadow-sm">
+            <div className="flex items-center border rounded-md bg-background px-3 py-1.5">
                 <Globe className="mr-2 h-4 w-4 text-muted-foreground" />
                 <select
                     className="bg-transparent text-sm font-medium focus:outline-none cursor-pointer"
@@ -155,7 +155,7 @@ export default function ShoppingListPage() {
       </div>
 
       {/* Table */}
-      <div className="border rounded-xl overflow-hidden bg-card shadow-sm">
+      <div className="border rounded-xl overflow-hidden bg-card">
           <Table>
               <TableHeader className="bg-muted/50">
                   <TableRow>

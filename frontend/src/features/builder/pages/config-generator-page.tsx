@@ -231,7 +231,7 @@ export default function ConfigGeneratorPage() {
                 <div className="flex items-center gap-3">
                      {loadingBuild && <span className="text-xs text-muted-foreground animate-pulse">Loading...</span>}
                      <select
-                        className="h-9 w-[200px] rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        className="h-9 w-[200px] rounded-md border border-input bg-background px-3 py-1 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                         value={selectedBuildId}
                         onChange={(e) => handleSelectBuild(e.target.value)}
                      >

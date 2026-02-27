@@ -97,7 +97,7 @@ export function LiveResourceDashboard() {
 
     return (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 pointer-events-auto">
-            <Card className={`shadow-lg border-primary/20 bg-background/95 backdrop-blur overflow-hidden transition-all duration-300 ${isExpanded ? 'w-[320px]' : 'w-[200px]'}`}>
+            <Card className={`shadow-none border-border bg-card overflow-hidden transition-all duration-300 ${isExpanded ? 'w-[320px]' : 'w-[200px]'}`}>
                 <div 
                     className="flex justify-between items-center p-2 px-3 cursor-pointer hover:bg-muted/50"
                     onClick={() => setIsExpanded(!isExpanded)}

@@ -27,21 +27,21 @@ export default function HomePage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 text-left max-w-5xl">
-        <div className="flex flex-col gap-2 p-6 border rounded-xl hover:shadow-md transition-shadow">
+        <div className="flex flex-col gap-2 p-6 border rounded-xl hover:border-primary/40 transition-colors">
           <Server className="h-10 w-10 text-primary mb-2" />
           <h3 className="text-xl font-bold">Smart Recommendations</h3>
           <p className="text-muted-foreground">
             Our algorithm analyzes CPU, RAM, and Storage requirements to suggest the best hardware tier.
           </p>
         </div>
-        <div className="flex flex-col gap-2 p-6 border rounded-xl hover:shadow-md transition-shadow">
+        <div className="flex flex-col gap-2 p-6 border rounded-xl hover:border-primary/40 transition-colors">
           <Zap className="h-10 w-10 text-primary mb-2" />
           <h3 className="text-xl font-bold">Instant Shopping List</h3>
           <p className="text-muted-foreground">
             Get direct links to purchase compatible hardware locally (Amazon/Allegro).
           </p>
         </div>
-        <div className="flex flex-col gap-2 p-6 border rounded-xl hover:shadow-md transition-shadow">
+        <div className="flex flex-col gap-2 p-6 border rounded-xl hover:border-primary/40 transition-colors">
           <Shield className="h-10 w-10 text-primary mb-2" />
           <h3 className="text-xl font-bold">Secure By Design</h3>
           <p className="text-muted-foreground">

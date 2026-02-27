@@ -286,7 +286,7 @@ export function HardwareToolbox() {
 
     return (
         <Card
-            className="absolute z-50 shadow-xl border-2 flex flex-col overflow-hidden transition-shadow"
+            className="absolute z-50 shadow-none border flex flex-col overflow-hidden"
             style={{
                 left: position.x,
                 top: position.y,
@@ -297,7 +297,7 @@ export function HardwareToolbox() {
         >
             {/* Header / Drag Handle */}
             <div
-                className="flex items-center justify-between px-3 py-2 bg-muted/50 cursor-grab active:cursor-grabbing border-b select-none"
+                className="flex items-center justify-between px-3 py-2 bg-muted cursor-grab active:cursor-grabbing border-b select-none"
                 onMouseDown={handleMouseDown}
             >
                 <div className="flex items-center gap-2">
@@ -315,7 +315,7 @@ export function HardwareToolbox() {
             {!isMinimized && (
                 <>
                     {/* Tab bar */}
-                    <div className="flex border-b shrink-0 bg-background/95 backdrop-blur">
+                    <div className="flex border-b shrink-0 bg-card">
                         {([
                             { id: 'components', label: 'Types', icon: LayoutGrid },
                             { id: 'presets',    label: 'Presets', icon: Package },
@@ -527,7 +527,7 @@ export function HardwareToolbox() {
                         )}
                     </div>
 
-                    <div className="border-t px-3 py-2 shrink-0 bg-background/50">
+                    <div className="border-t px-3 py-2 shrink-0 bg-card">
                         <p className="text-[9px] text-muted-foreground text-center opacity-60">
                             Drag to canvas · Connect to router for auto-IP
                         </p>
