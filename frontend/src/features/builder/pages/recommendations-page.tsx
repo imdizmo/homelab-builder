@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useBuilderStore } from "../store/builder-store"
 import { Button } from "../../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card"
-import { Cpu, HardDrive, MemoryStick, ShoppingCart, CheckCircle2, ChevronDown, ChevronUp, Loader2, ExternalLink } from "lucide-react"
+import { Cpu, HardDrive, MemoryStick, CheckCircle2, ChevronDown, ChevronUp, Loader2, ExternalLink } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import VisualBuilder from "../components/visual-builder"
 import { cn } from "../../../lib/utils"
@@ -54,9 +54,9 @@ export default function RecommendationsPage() {
                     {showInsights ? <ChevronUp className="h-4 w-4 mr-2" /> : <ChevronDown className="h-4 w-4 mr-2" />}
                     {showInsights ? "Hide Recommendations" : "Show Recommendations"}
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => navigate('/shopping-list')}>
+                {/* <Button size="sm" variant="outline" onClick={() => navigate('/shopping-list')}>
                     Shopping List <ShoppingCart className="ml-2 h-4 w-4" />
-                </Button>
+                </Button> */}
             </div>
           </div>
 

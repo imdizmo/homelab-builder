@@ -5,6 +5,7 @@ import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table"
 import { Trash2, ArrowUp, ArrowDown } from "lucide-react"
+import { LoadingScreen } from "../../../components/ui/loading-screen"
 
 export interface SteeringRule {
     category: string
@@ -34,7 +35,7 @@ export function SteeringRulesManager() {
         onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-steering"] })
     })
 
-    if (isLoading) return <div>Loading...</div>
+    if (isLoading) return <LoadingScreen message="Loading Steering Rules..." />
 
     const rules: SteeringRule[] = data?.data || []
 

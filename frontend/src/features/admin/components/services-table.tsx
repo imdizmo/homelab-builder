@@ -11,6 +11,7 @@ import { Button } from "../../../components/ui/button"
 import { Edit2, Trash2 } from "lucide-react"
 import { useDeleteService } from "../api/use-admin"
 import { ServiceDialog } from "./service-dialog"
+import { LoadingScreen } from "../../../components/ui/loading-screen"
 
 interface ServicesTableProps {
   services: Service[] | undefined
@@ -21,7 +22,7 @@ export function ServicesTable({ services, isLoading }: ServicesTableProps) {
   const { mutate: deleteService } = useDeleteService()
 
   if (isLoading) {
-    return <div>Loading...</div> // Or skeleton rows
+    return <LoadingScreen message="Loading Services..." /> // Or skeleton rows
   }
 
   if (!services || services.length === 0) {

@@ -68,7 +68,7 @@ function Flow() {
     const [tourSteps] = useState<Step[]>([
         {
             target: '.tour-toolbox',
-            content: 'Welcome to Homelab Builder! Drag networking gear and servers from this toolbox onto your canvas.',
+            content: 'Welcome to HLBuilder! Drag networking gear and servers from this toolbox onto your canvas.',
             disableBeacon: true,
         },
         {
@@ -488,7 +488,7 @@ function Flow() {
                     </DropdownMenu>
 
                     <div className="flex flex-col">
-                        <h2 className="text-sm font-semibold leading-none">{projectName || "Homelab Builder"}</h2>
+                        <h2 className="text-sm font-semibold leading-none">{projectName || "HLBuilder"}</h2>
                         <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                             {saveStatus === 'saving' && <span className="text-amber-500 flex items-center gap-1"><span className="animate-spin">⟳</span> Saving...</span>}
                             {saveStatus === 'saved' && <span className="text-green-500 flex items-center gap-1">Cloud Saved</span>}

@@ -2,6 +2,7 @@ import { useAdminStats, useAdminServices } from "../api/use-admin"
 import { AdminStats } from "../components/admin-stats"
 import { ServiceDialog } from "../components/service-dialog"
 import { Skeleton } from "../../../components/ui/skeleton"
+import { LoadingScreen } from "../../../components/ui/loading-screen"
 import { ServicesTable } from "../components/services-table"
 import { AdminHardwareManager } from "../components/hardware-manager"
 import { AffiliateLinksManager } from "../components/affiliate-links-manager"
@@ -18,7 +19,7 @@ export default function AdminPage() {
   const { data: services, isLoading: servicesLoading } = useAdminServices()
   const [tab, setTab] = useState<"services" | "hardware" | "links" | "steering" | "mass-planner">("services")
 
-  if (loading) return <div className="p-8">Loading...</div>
+  if (loading) return <LoadingScreen message="Loading Admin Dashboard..." />
   if (!user?.is_admin) return <Navigate to="/" replace />
 
   return (

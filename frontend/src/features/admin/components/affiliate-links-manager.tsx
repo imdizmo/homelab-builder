@@ -6,6 +6,7 @@ import { Input } from "../../../components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table"
 import type { CatalogComponent } from "../../../types"
 import { Link, Plus, Trash2, Beaker } from "lucide-react"
+import { LoadingScreen } from "../../../components/ui/loading-screen"
 
 export interface AdminHardwareResult {
     data: CatalogComponent[]
@@ -57,7 +58,7 @@ export function AffiliateLinksManager() {
         })
     }
 
-    if (isLoading) return <div>Loading...</div>
+    if (isLoading) return <LoadingScreen message="Loading Links..." />
 
     return (
         <div className="space-y-4">

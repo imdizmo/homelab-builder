@@ -7,6 +7,7 @@ import { Label } from "../../../components/ui/label"
 import { Textarea } from "../../../components/ui/textarea"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table"
 import { Trash2, Edit } from "lucide-react"
+import { LoadingScreen } from "../../../components/ui/loading-screen"
 import {
   Dialog,
   DialogContent,
@@ -55,7 +56,7 @@ export function CatalogComponentsManager() {
         onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-mass-planner"] })
     })
 
-    if (isLoading) return <div>Loading...</div>
+    if (isLoading) return <LoadingScreen message="Loading Catalog Components..." />
 
     const components: CatalogComponentRaw[] = data?.data || []
 

@@ -9,7 +9,7 @@ export default function LoginPage() {
                 <Hammer className="h-16 w-16 text-primary" />
             </div>
             
-            <h1 className="text-4xl font-bold tracking-tight mb-3">Homelab Builder</h1>
+            <h1 className="text-4xl font-bold tracking-tight mb-3">HLBuilder</h1>
             <p className="text-xl text-muted-foreground max-w-md mb-8">
                 Design, plan, and generate configuration for your dream homelab in minutes.
             </p>

@@ -3,15 +3,18 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from './components/theme-provider';
 // import MainLayout from './components/layout/main-layout'; // API: Removed unused layout
 
-import VisualBuilderPage from './features/builder/components/visual-builder';
-import ProjectsPage from './features/builder/pages/projects-page';
-import AdminPage from './features/admin/pages/admin-page';
-import ShoppingListPage from './features/shopping/pages/shopping-list-page';
-import HardwareCatalogPage from './features/catalog/pages/hardware-catalog-page';
-import ServiceCatalogPage from './features/catalog/pages/service-catalog-page';
-import ChecklistPage from './features/setup-guide/pages/checklist-page';
-import ConfigGeneratorPage from './features/builder/pages/config-generator-page';
-import ProfilePage from './features/auth/pages/profile-page';
+import { Suspense, lazy } from 'react';
+import { LoadingScreen } from './components/ui/loading-screen';
+
+const VisualBuilderPage = lazy(() => import('./features/builder/components/visual-builder'));
+const ProjectsPage = lazy(() => import('./features/builder/pages/projects-page'));
+const AdminPage = lazy(() => import('./features/admin/pages/admin-page'));
+// const ShoppingListPage = lazy(() => import('./features/shopping/pages/shopping-list-page'));
+const HardwareCatalogPage = lazy(() => import('./features/catalog/pages/hardware-catalog-page'));
+const ServiceCatalogPage = lazy(() => import('./features/catalog/pages/service-catalog-page'));
+const ChecklistPage = lazy(() => import('./features/setup-guide/pages/checklist-page'));
+const ConfigGeneratorPage = lazy(() => import('./features/builder/pages/config-generator-page'));
+const ProfilePage = lazy(() => import('./features/auth/pages/profile-page'));
 import { RequireAuth } from './components/auth/require-auth';
 import { Sidebar } from './components/layout/sidebar';
 import { ThemeToggle } from './components/theme-toggle'; 
@@ -27,7 +30,7 @@ import { useTheme } from './components/theme-provider';
 import { useBuilderStore } from './features/builder/store/builder-store';
 import { useEffect } from 'react';
 
-import LoginPage from './features/auth/pages/login-page';
+const LoginPage = lazy(() => import('./features/auth/pages/login-page'));
 
 function AppContent() {
   const location = useLocation();
@@ -56,19 +59,21 @@ function AppContent() {
             <div className="absolute top-4 right-4 z-50">
             <ThemeToggle />
             </div>
-            <Routes>
-              <Route path="/" element={user ? <ProjectsPage /> : <LoginPage />} />
-              {/* Protected routes */}
-              <Route path="/builder/:id" element={<RequireAuth><VisualBuilderPage /></RequireAuth>} />
-              <Route path="/shopping-list" element={<RequireAuth><ShoppingListPage /></RequireAuth>} />
-              <Route path="/generate" element={<RequireAuth><ConfigGeneratorPage /></RequireAuth>} />
-              <Route path="/admin" element={<RequireAuth><AdminPage /></RequireAuth>} />
-              <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
-              {/* Public catalog routes */}
-              <Route path="/hardware" element={<HardwareCatalogPage />} />
-              <Route path="/services" element={<ServiceCatalogPage />} />
-              <Route path="/checklist" element={<ChecklistPage />} />
-            </Routes>
+            <Suspense fallback={<LoadingScreen message="Loading HLBuilder..." />}>
+              <Routes>
+                <Route path="/" element={user ? <ProjectsPage /> : <LoginPage />} />
+                {/* Protected routes */}
+                <Route path="/builder/:id" element={<RequireAuth><VisualBuilderPage /></RequireAuth>} />
+                {/* <Route path="/shopping-list" element={<RequireAuth><ShoppingListPage /></RequireAuth>} /> - Disabled for Open Beta */}
+                <Route path="/generate" element={<RequireAuth><ConfigGeneratorPage /></RequireAuth>} />
+                <Route path="/admin" element={<RequireAuth><AdminPage /></RequireAuth>} />
+                <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
+                {/* Public catalog routes */}
+                <Route path="/hardware" element={<HardwareCatalogPage />} />
+                <Route path="/services" element={<ServiceCatalogPage />} />
+                <Route path="/checklist" element={<ChecklistPage />} />
+              </Routes>
+            </Suspense>
         </main>
     </div>
   );

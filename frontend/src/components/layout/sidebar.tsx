@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
-import { LayoutDashboard, ShoppingCart, CheckSquare, Settings, Hammer, HardDrive, FileCode, ChevronsLeft, ChevronsRight, Heart, Globe, X } from "lucide-react"
+import { LayoutDashboard, CheckSquare, Settings, HardDrive, FileCode, ChevronsLeft, ChevronsRight, Heart, Globe, X } from "lucide-react"
 import { Github } from "../icons/github"
 import { cn } from "../../lib/utils"
 import { useAuth } from "../../features/admin/hooks/use-auth"
 import { useBuilderStore } from "../../features/builder/store/builder-store"
 import { GoogleLoginButton } from "../auth/google-login-button"
 import { LayoutTemplate } from "lucide-react"
+import { Logo } from "../ui/logo"
 
 const STORAGE_KEY = "sidebar-collapsed"
 
@@ -15,7 +16,7 @@ const BASE_NAV_ITEMS = [
   { label: "Config Generator", href: "/generate", icon: FileCode },
   { label: "Hardware Catalog", href: "/hardware", icon: HardDrive },
   { label: "Service Library", href: "/services", icon: CheckSquare },
-  { label: "Shopping List", href: "/shopping-list", icon: ShoppingCart },
+  // { label: "Shopping List", href: "/shopping-list", icon: ShoppingCart }, // Hidden for Open Beta
   { label: "Setup Guide", href: "/checklist", icon: CheckSquare },
   { label: "Admin", href: "/admin", icon: Settings },
 ]
@@ -48,15 +49,19 @@ export function Sidebar({ className }: { className?: string }) {
       )}
     >
       {/* Logo */}
-      <div className="flex h-16 items-center border-b border-[#27272A] px-4 shrink-0">
-        <Hammer className="h-6 w-6 text-primary shrink-0" />
+      <div 
+        className="flex h-16 items-center border-b border-[#27272A] px-4 shrink-0 group cursor-pointer select-none"
+        onClick={() => navigate("/")}
+        title="Go to Projects"
+      >
+        <Logo className="h-8 w-8 shrink-0 drop-shadow-sm" interactive />
         <span
           className={cn(
-            "ml-2 text-lg font-bold tracking-tight whitespace-nowrap transition-all duration-300",
+            "ml-3 text-xl font-bold tracking-tight whitespace-nowrap transition-all duration-300",
             collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
           )}
         >
-          Homelab Builder
+          HLBuilder
         </span>
       </div>
 
