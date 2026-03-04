@@ -14,10 +14,11 @@ The core of the application is a visual canvas powered by **ReactFlow**.
 - **Real-time Synchronization**: The visual state is continuously synchronized with a PostgreSQL database.
 
 ### 2. Automated IP Management (`hlbIPAM`)
-A sophisticated, stateless backend microservice manages network addressing:
+A sophisticated backend microservice manages network addressing:
+- **Microservice Architecture for Scaling**: Built as a completely independent, stateless Go service. IP allocation requires heavy graph traversal and subnet math; isolating it means we can horizontally scale the IPAM workers seamlessly under high load without dragging down the main API server.
 - **Topology-Aware BFS**: Automatically assigns IP addresses by performing a Breadth-First Search from the gateway.
 - **Dynamic Pool Sizing**: Intelligently packs VM-hosting devices into separate pools without collisions.
-- **Conflict Prevention**: Pre-reserves DHCP ranges and handles custom IP assignments without overlapping.
+- **Conflict Prevention**: Handles custom IP assignments and avoids DHCP range overlaps.
 
 ### 3. Service Catalog & Hardware Recommendations
 - **Comprehensive Catalog**: Browse popular homelab services with pre-defined resource requirements.
