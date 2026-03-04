@@ -220,7 +220,7 @@ type VirtualMachine struct {
 	Type      string    `gorm:"not null" json:"type"` // vm, container, lxc
 	IP        string    `gorm:"default:''" json:"ip"`
 	OS        string    `gorm:"default:''" json:"os"`
-	CPUCores  int       `gorm:"default:0" json:"cpu_cores"`
+	CPUCores  float64   `gorm:"default:0" json:"cpu_cores"`
 	RAMMB     int       `gorm:"default:0" json:"ram_mb"`
 	Status    string    `gorm:"default:'stopped'" json:"status"`
 	CreatedAt time.Time `json:"created_at"`

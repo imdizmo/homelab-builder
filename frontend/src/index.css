@@ -185,7 +185,7 @@
 }
 
 .node-selected-ring {
-  border: 1.5px solid var(--node-accent, #FAFAFA);
+  border: 3px solid var(--node-accent, #FAFAFA);
   animation: node-ring-pulse 2s ease-in-out infinite;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--node-accent, #FAFAFA) 20%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--node-accent, #FAFAFA) 15%, transparent);
 }

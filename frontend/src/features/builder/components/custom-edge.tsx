@@ -59,6 +59,10 @@ export function CustomEdge({
   const edgePreferences = useBuilderStore(s => s.edgePreferences);
   const nodes = useNodes();
   const [isHovered, setIsHovered] = useState(false);
+
+  // Glow when either connected node is selected
+  const isNodeSelected = nodes.some(n => (n.id === source || n.id === target) && n.selected);
+  const isHighlighted = selected || isNodeSelected;
   
   const sourceNode = useInternalNode(source);
   const targetNode = useInternalNode(target);
@@ -196,11 +200,13 @@ export function CustomEdge({
         style={{
           ...style,
           stroke: edgeColor,
-          strokeWidth: selected ? Math.max(Number(style.strokeWidth || 2), 4) : (style.strokeWidth || 2),
+          strokeWidth: isHighlighted ? Math.max(Number(style.strokeWidth || 2), 3.5) : (style.strokeWidth || 2),
           strokeDasharray: '4 8',
           animationDuration: '1.5s',
-          transition: 'stroke 0.2s, stroke-width 0.2s',
-          filter: selected ? 'brightness(1.2)' : 'none'
+          transition: 'stroke 0.2s, stroke-width 0.2s, filter 0.2s',
+          filter: isHighlighted 
+            ? `drop-shadow(0 0 4px ${edgeColor}) brightness(1.3)` 
+            : 'none'
         }} 
       />
       <EdgeLabelRenderer>

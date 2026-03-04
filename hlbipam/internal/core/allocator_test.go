@@ -23,18 +23,19 @@ func TestAllocate_SingleRouterLinearTopology(t *testing.T) {
 	resp := Allocate(req)
 
 	assertIP(t, resp, "sw1", "192.168.1.10")
-	assertIP(t, resp, "srv1", "192.168.1.150")
-	assertIP(t, resp, "pc1", "192.168.1.170")
+	// VMHostTypeOrder: nas, server, pc, minipc, sbc
+	assertIP(t, resp, "srv1", "192.168.1.100")
+	assertIP(t, resp, "pc1", "192.168.1.120")
 
 	vmIPs := findVMIPs(resp, "srv1")
 	if len(vmIPs) != 2 {
 		t.Fatalf("expected 2 VM IPs, got %d", len(vmIPs))
 	}
-	if vmIPs[0] != "192.168.1.151" {
-		t.Errorf("vm1 expected .151, got %s", vmIPs[0])
+	if vmIPs[0] != "192.168.1.101" {
+		t.Errorf("vm1 expected .101, got %s", vmIPs[0])
 	}
-	if vmIPs[1] != "192.168.1.152" {
-		t.Errorf("vm2 expected .152, got %s", vmIPs[1])
+	if vmIPs[1] != "192.168.1.102" {
+		t.Errorf("vm2 expected .102, got %s", vmIPs[1])
 	}
 
 	if len(resp.Conflicts) != 0 {
@@ -55,7 +56,7 @@ func TestAllocate_ExistingIPsPreserved(t *testing.T) {
 
 	resp := Allocate(req)
 	assertIP(t, resp, "sw1", "192.168.1.15")
-	assertIP(t, resp, "srv1", "192.168.1.150")
+	assertIP(t, resp, "srv1", "192.168.1.100")
 }
 
 func TestAllocate_MultipleRoutersMultipleSubnets(t *testing.T) {

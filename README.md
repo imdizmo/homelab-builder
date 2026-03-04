@@ -1,40 +1,68 @@
 # Homelab Builder
 
-An interactive web application that helps you plan your homelab infrastructure. Select the services you want to self-host, and get hardware recommendations with a shopping list.
+Homelab Builder is a comprehensive, interactive web application designed to simplify the process of planning and architecting home laboratory infrastructure. It provides users with a visual interface to design network topologies, receive intelligent hardware recommendations based on their self-hosting needs, and generate actionable shopping lists.
 
-## Features
+## 🚀 Key Features
 
-- **Service Catalog** — Browse 15+ popular homelab services (Plex, Jellyfin, Home Assistant, Pi-hole, etc.)
-- **Hardware Recommendations** — Get 3-tier specs (Minimal / Recommended / Optimal) based on your selections
-- **Shopping List** — Itemized component list with estimated prices (PLN) and purchase links
-- **Google OAuth** — Save your selections with authentication
-- **Docker Ready** — One-command deployment with Docker Compose
+### 1. Visual Network Builder
+The core of the application is a visual canvas powered by **ReactFlow**.
+- **Drag-and-drop hardware nodes**: Routers, switches, servers, NAS, Mini-PCs, SBCs (like Raspberry Pi), UPS, and more.
+- **Wire components**: Graph-based representation of physical and logical connections.
+- **Nested Virtualization**: Define Virtual Machines (VMs), Containers, or LXCs directly on compute nodes.
+- **Real-time Synchronization**: The visual state is continuously synchronized with a PostgreSQL database.
 
-## Tech Stack
+### 2. Automated IP Management (`hlbIPAM`)
+A sophisticated, stateless backend microservice manages network addressing:
+- **Topology-Aware BFS**: Automatically assigns IP addresses by performing a Breadth-First Search from the gateway.
+- **Dynamic Pool Sizing**: Intelligently packs VM-hosting devices into separate pools without collisions.
+- **Conflict Prevention**: Pre-reserves DHCP ranges and handles custom IP assignments without overlapping.
+
+### 3. Service Catalog & Hardware Recommendations
+- **Comprehensive Catalog**: Browse popular homelab services with pre-defined resource requirements.
+- **3-Tier Suggestions**: Generates "Minimal", "Recommended", and "Optimal" hardware profiles.
+- **Live Resource Dashboard**: Calculates aggregate CPU, RAM, Storage, and Power needs to ensure hardware can handle the concurrent load.
+
+### 4. Actionable Shopping List
+- **Itemized Components**: Automatically generates a shopping list including main hardware and necessary peripherals (RAM, NVMe, etc.).
+- **Price Estimation**: Provides estimated costs with direct purchase links based on your region.
+
+---
+
+## 🛠️ Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React + TypeScript (Vite) |
-| Backend | Go (Gin + GORM) |
-| Database | PostgreSQL 15 |
-| Auth | Google OAuth + JWT |
-| Deploy | Docker + Nginx |
+| **Frontend** | React 18 + TypeScript, Vite, ReactFlow, TailwindCSS, Zustand |
+| **Backend API** | Go 1.24+, Gin, GORM v1.25.x |
+| **IPAM Microservice**| Go 1.24+, Standard Library REST API |
+| **Database** | PostgreSQL 15 |
+| **Auth & Security** | Google OAuth 2.0 + JWT |
+| **Deploy** | Docker & Docker Compose |
 
-## Quick Start
+---
+
+## 🏗️ Architecture Overview
+For detailed information on the codebase architecture, folder structure, testing infrastructure, and known pitfalls, please refer to [AGENTS.md](./AGENTS.md). 
+For the feature roadmap and future ideas, see [ROADMAP.md](./ROADMAP.md).
+
+---
+
+## 🚀 Quick Start
 
 ```bash
-# Clone and start
+# Clone the repository
 git clone https://github.com/Butterski/homelab-builder.git
 cd homelab-builder
+
+# Start all services via Docker Compose
 docker compose up -d
 
-# Access
+# Access the application
 # Frontend: http://localhost:3000
 # Backend:  http://localhost:8080
-# API:      http://localhost:8080/api/services
 ```
 
-## Development
+## 👨‍💻 Local Development
 
 ```bash
 # Backend (requires Go 1.24+)
@@ -48,39 +76,5 @@ npm install
 npm run dev
 ```
 
-## API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Health check |
-| GET | `/api/services` | List all services |
-| GET | `/api/services/:id` | Get service by ID |
-| POST | `/api/recommendations` | Generate hardware recommendations |
-| POST | `/api/shopping-list` | Generate shopping list |
-| POST | `/auth/google` | Google OAuth login |
-| GET | `/auth/me` | Get current user (auth required) |
-| GET | `/api/selections` | Get user selections (auth required) |
-| POST | `/api/selections` | Add selection (auth required) |
-| DELETE | `/api/selections/:id` | Remove selection (auth required) |
-
-## Architecture
-
-```
-frontend/ (React + Vite)
-├── src/
-│   ├── pages/       # HomePage, ServicesPage, RecommendationsPage, ShoppingListPage
-│   ├── components/  # Navbar
-│   ├── services/    # API client
-│   └── types/       # TypeScript interfaces
-
-backend/ (Go + Gin)
-├── cmd/server/      # Entry point
-├── internal/
-│   ├── handlers/    # HTTP handlers
-│   ├── services/    # Business logic
-│   ├── models/      # GORM models
-│   ├── middleware/   # JWT auth
-│   └── config/      # Environment config
-├── pkg/database/    # DB connection
-└── migrations/      # SQL migrations + seed data
-```
+## 📄 License
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. See the [LICENSE](./LICENSE) file for details.

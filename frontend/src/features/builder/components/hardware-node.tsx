@@ -169,7 +169,7 @@ export const HardwareNode = memo(({ id, data, selected }: NodeProps) => {
             {/* Animated ring on selection — uses device accent color */}
             {selected && (
                 <div
-                    className="absolute -inset-[3px] -z-10 rounded-[14px] pointer-events-none node-selected-ring"
+                    className="absolute -inset-[4px] -z-10 rounded-[16px] pointer-events-none node-selected-ring"
                     style={{ '--node-accent': cfg.color } as React.CSSProperties}
                 />
             )}

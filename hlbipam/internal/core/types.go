@@ -29,6 +29,10 @@ var DefaultDeviceZones = map[string]ZoneConfig{
 
 var FallbackZone = ZoneConfig{BaseOffset: 200, Step: 1, CanHostVMs: false, Label: "Device"}
 
+// VMHostTypeOrder defines the deterministic order in which VM-hosting
+// device types are laid out in the address space. Core infra first.
+var VMHostTypeOrder = []string{"nas", "server", "pc", "minipc", "sbc"}
+
 // NonNetworkTypes are device types that don't receive an IP address.
 var NonNetworkTypes = map[string]bool{
 	"disk": true, "gpu": true, "hba": true, "pcie": true, "pdu": true, "ups": true,
@@ -59,6 +63,9 @@ const (
 	// ReservedInfra is the number of addresses set aside for infrastructure
 	// (gateway, switches, APs, broadcast, etc.) when calculating dynamic steps.
 	ReservedInfra = 30
+	// VMHostStartOffset is where VM-hosting devices begin packing contiguously.
+	// Infrastructure devices (router, switch, AP, etc.) live below this.
+	VMHostStartOffset = 100
 )
 
 // CalculateDynamicStep calculates the optimal per-device pool step size based

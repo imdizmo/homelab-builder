@@ -184,15 +184,23 @@ export function generateShoppingList(
     hardwareNodes.forEach(node => {
         let rec: { name: string; spec: string; price: number }
 
-        switch (node.type) {
-            case 'router': rec = routerSpec(node); break
-            case 'switch': rec = switchSpec(node); break
-            case 'nas': rec = nasSpec(node); break
-            case 'server': rec = serverSpec(node); break
-            case 'pc': rec = serverSpec(node); break
-            case 'access_point': rec = accessPointSpec(node); break
-            default:
-                rec = { name: node.name, spec: 'Custom hardware', price: 100 }
+        if (node.details?.model) {
+            rec = {
+                name: node.details.model,
+                spec: [node.details.cpu, node.details.ram, node.details.storage, node.details.ports ? `${node.details.ports} ports` : ''].filter(Boolean).join(', ') || 'Custom hardware',
+                price: node.details.price_est ?? 100
+            }
+        } else {
+            switch (node.type) {
+                case 'router': rec = routerSpec(node); break
+                case 'switch': rec = switchSpec(node); break
+                case 'nas': rec = nasSpec(node); break
+                case 'server': rec = serverSpec(node); break
+                case 'pc': rec = serverSpec(node); break
+                case 'access_point': rec = accessPointSpec(node); break
+                default:
+                    rec = { name: node.name, spec: 'Custom hardware', price: 100 }
+            }
         }
 
         items.push({

@@ -120,11 +120,16 @@ func Validate(req models.AllocateRequest) models.ValidateResponse {
 
 				zone := GetZone(n.Type, zones)
 				octet := utils.ParseLastOctet(ip)
-				if octet >= 0 && (octet < zone.BaseOffset || octet >= zone.BaseOffset+zone.Step*10) {
-					resp.Warnings = append(resp.Warnings, models.Issue{
-						NodeID:  n.ID,
-						Message: fmt.Sprintf("IP %s (octet .%d) is outside recommended zone for %s (expected .%d+)", ip, octet, n.Type, zone.BaseOffset),
-					})
+
+				// Only infrastructure types keep their fixed base offsets.
+				// VM hosts are packed dynamically, so their offsets varies.
+				if !zone.CanHostVMs && octet >= 0 {
+					if octet < zone.BaseOffset || octet >= zone.BaseOffset+zone.Step*10 {
+						resp.Warnings = append(resp.Warnings, models.Issue{
+							NodeID:  n.ID,
+							Message: fmt.Sprintf("IP %s (octet .%d) is outside recommended fixed zone for %s (expected .%d+)", ip, octet, n.Type, zone.BaseOffset),
+						})
+					}
 				}
 
 				if dhcpStart > 0 && octet >= dhcpStart && octet <= dhcpEnd {

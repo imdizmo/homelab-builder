@@ -252,14 +252,14 @@ type ComponentDTO struct {
 }
 
 type VMDTO struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Type     string `json:"type"`
-	IP       string `json:"ip"`
-	OS       string `json:"os"`
-	CPUCores int    `json:"cpu_cores"`
-	RAMMB    int    `json:"ram_mb"`
-	Status   string `json:"status"`
+	ID       string  `json:"id"`
+	Name     string  `json:"name"`
+	Type     string  `json:"type"`
+	IP       string  `json:"ip"`
+	OS       string  `json:"os"`
+	CPUCores float64 `json:"cpu_cores"`
+	RAMMB    int     `json:"ram_mb"`
+	Status   string  `json:"status"`
 }
 
 type ServiceDTO struct {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
-import { LayoutDashboard, ShoppingCart, CheckSquare, Settings, Hammer, HardDrive, FileCode, ChevronsLeft, ChevronsRight } from "lucide-react"
+import { LayoutDashboard, ShoppingCart, CheckSquare, Settings, Hammer, HardDrive, FileCode, ChevronsLeft, ChevronsRight, Heart, Globe, X } from "lucide-react"
+import { Github } from "../icons/github"
 import { cn } from "../../lib/utils"
 import { useAuth } from "../../features/admin/hooks/use-auth"
 import { useBuilderStore } from "../../features/builder/store/builder-store"
@@ -132,6 +133,22 @@ export function Sidebar({ className }: { className?: string }) {
           />
         </div>
       )}
+
+      {/* Social Links */}
+      <div className={cn("border-t p-4 flex items-center shrink-0", collapsed ? "flex-col p-2 gap-4" : "justify-center gap-5")}>
+        <a href="https://github.com/Butterski/homelab-builder" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" title="Project Site">
+          <Globe className="h-4 w-4" />
+        </a>
+        <a href="https://github.com/Butterski" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" title="GitHub">
+          <Github className="h-4 w-4" />
+        </a>
+        <a href="https://github.com/sponsors/Butterski" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-pink-500 transition-colors" title="Sponsor">
+          <Heart className="h-4 w-4" />
+        </a>
+        <a href="https://x.com/sretub" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" title="X (Twitter)">
+          <X className="h-4 w-4" />
+        </a>
+      </div>
 
       {/* Collapse toggle */}
       <div className="border-t p-2 flex justify-center shrink-0">
