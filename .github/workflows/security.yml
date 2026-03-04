@@ -1,0 +1,46 @@
+name: Security Analysis
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  schedule:
+    - cron: '27 15 * * 3' # Weekly scan
+
+jobs:
+  gosec:
+    name: Run Gosec (Backend Security Scanner)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@master
+        with:
+          args: ./backend/internal/...
+
+  npm-audit:
+    name: Run NPM Audit (Frontend Security Scanner)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      - name: NPM Install
+        run: npm ci
+        working-directory: ./frontend
+
+      - name: NPM Audit
+        run: npm audit --audit-level=high
+        working-directory: ./frontend
