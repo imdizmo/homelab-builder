@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { NavLink, useNavigate, Link } from "react-router-dom"
-import { LayoutDashboard, CheckSquare, Settings, HardDrive, FileCode, ChevronsLeft, ChevronsRight, Heart, Globe, X, ClipboardList, CheckCircle2 } from "lucide-react"
+import { LayoutDashboard, CheckSquare, Settings, HardDrive, FileCode, ChevronsLeft, ChevronsRight, Heart, Globe, ClipboardList, CheckCircle2 } from "lucide-react"
 import { Github } from "../icons/github"
 import { Discord } from "../icons/discord"
 import { cn } from "../../lib/utils"
@@ -164,9 +164,6 @@ export function Sidebar({ className }: { className?: string }) {
         </a>
         <a href="https://github.com/sponsors/Butterski" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-pink-500 transition-colors" title="Sponsor">
           <Heart className="h-4 w-4" />
-        </a>
-        <a href="https://x.com/sretub" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" title="X (Twitter)">
-          <X className="h-4 w-4" />
         </a>
         <a href="https://discord.gg/8PQb2M2fBB" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-indigo-500 transition-colors" title="Discord">
           <Discord className="h-4 w-4" />

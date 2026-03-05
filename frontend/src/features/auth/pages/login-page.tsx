@@ -1,5 +1,5 @@
 import { GoogleLoginButton } from "../../../components/auth/google-login-button"
-import { Server, ShoppingCart, CheckSquare, Globe, Heart, X } from "lucide-react"
+import { Server, ShoppingCart, CheckSquare, Globe, Heart } from "lucide-react"
 import { Link } from "react-router-dom"
 import { AnimatedLogo } from "../../../components/ui/animated-logo"
 import { Github } from "../../../components/icons/github"
@@ -59,9 +59,6 @@ export default function LoginPage() {
                 </a>
                 <a href="https://github.com/sponsors/Butterski" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-pink-500 transition-colors" title="Sponsor">
                     <Heart className="h-4 w-4" />
-                </a>
-                <a href="https://x.com/sretub" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" title="X (Twitter)">
-                    <X className="h-4 w-4" />
                 </a>
                 <a href="https://discord.gg/8PQb2M2fBB" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-indigo-500 transition-colors" title="Discord">
                     <Discord className="h-4 w-4" />
