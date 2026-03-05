@@ -6,8 +6,6 @@ services:
       POSTGRES_USER: homelab
       POSTGRES_PASSWORD: homelab_password
       POSTGRES_DB: homelab_builder
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/migrations:/docker-entrypoint-initdb.d
@@ -49,8 +47,6 @@ services:
       context: ./hlbipam
       dockerfile: Dockerfile
     container_name: homelab-builder-ipam
-    ports:
-      - "8081:8081"
     environment:
       PORT: "8081"
     restart: unless-stopped

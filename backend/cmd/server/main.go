@@ -45,7 +45,14 @@ func setupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 
 	// CORS middleware
 	router.Use(func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
+		if gin.Mode() == gin.ReleaseMode {
+			// In production, the NGINX reverse proxy ensures the API and UI are on the same origin.
+			// No wide-open CORS needed.
+			c.Header("Access-Control-Allow-Origin", "https://hlbldr.com")
+		} else {
+			// In development, allow localhost origin
+			c.Header("Access-Control-Allow-Origin", "*")
+		}
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization")
 		if c.Request.Method == "OPTIONS" {
@@ -91,7 +98,11 @@ func setupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 		{
 			// Apply rate limiting to login
 			auth.POST("/google", middleware.RateLimitMiddleware(rateLimiter), authHandler.GoogleLogin)
-			auth.POST("/dev", authHandler.DevLogin) // Backdoor for local development
+
+			// Backdoor for local development - disable in production
+			if gin.Mode() != gin.ReleaseMode {
+				auth.POST("/dev", authHandler.DevLogin)
+			}
 			auth.GET("/me", middleware.AuthMiddleware(authService, cfg.AuthDisabled), authHandler.GetCurrentUser)
 			auth.PUT("/preferences", middleware.AuthMiddleware(authService, cfg.AuthDisabled), authHandler.UpdatePreferences)
 		}
