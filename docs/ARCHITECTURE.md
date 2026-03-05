@@ -19,14 +19,15 @@ Remember - I don't want migrations scripts or Legacy things support. If somethin
 1. [Project Overview](#project-overview)
 2. [Monorepo Layout](#monorepo-layout)
 3. [Backend Architecture](#backend-architecture)
-4. [Frontend Architecture](#frontend-architecture)
-5. [Data Model](#data-model)
-6. [IP Assignment Algorithm](#ip-assignment-algorithm)
-7. [Testing Infrastructure](#testing-infrastructure)
-8. [Running Tests](#running-tests)
-9. [Common Issues & Pitfalls](#common-issues--pitfalls)
-10. [Fixed Bugs (Historical)](#fixed-bugs-historical)
-11. [Environment Variables](#environment-variables)
+4. [HLBIPAM Microservice](#hlbipam-microservice)
+5. [Frontend Architecture](#frontend-architecture)
+6. [Data Model](#data-model)
+7. [IP Assignment Algorithm](#ip-assignment-algorithm)
+8. [Testing Infrastructure](#testing-infrastructure)
+9. [Running Tests](#running-tests)
+10. [Common Issues & Pitfalls](#common-issues--pitfalls)
+11. [Fixed Bugs (Historical)](#fixed-bugs-historical)
+12. [Environment Variables](#environment-variables)
 
 ---
 
@@ -34,9 +35,10 @@ Remember - I don't want migrations scripts or Legacy things support. If somethin
 
 **HLBuilder** is a full-stack web app that lets users visually design their home lab network — placing hardware nodes (routers, switches, servers, NAS, etc.), wiring them, and automatically receiving IP address assignments and service recommendations.
 
-- **Backend**: Go 1.24.5, Gin, GORM v1.31.1, PostgreSQL 15
+- **Backend**: Go 1.24.5, Gin, GORM v1.31.1, PostgreSQL 17
+- **HLBIPAM**: Standalone Go microservice for IP Address Management
 - **Frontend**: React 18, TypeScript, Vite, ReactFlow, Zustand, Vitest
-- **Infrastructure**: Docker Compose (postgres + backend + frontend)
+- **Infrastructure**: Docker Compose (postgres + backend + hlbipam + frontend)
 
 ---
 
@@ -44,9 +46,9 @@ Remember - I don't want migrations scripts or Legacy things support. If somethin
 
 ```
 homelab-builder/
-├── docker-compose.yml          # postgres + backend + frontend services
+├── docker-compose.yml          # postgres + backend + hlbipam + frontend services
+├── docker-compose.test.yml     # test-specific compose overrides
 ├── Makefile                    # dev and test commands
-├── MVP.md                      # feature roadmap
 ├── AGENTS.md                   # this file
 ├── backend/
 │   ├── cmd/
@@ -55,26 +57,55 @@ homelab-builder/
 │   ├── internal/
 │   │   ├── config/config.go    # env var loading
 │   │   ├── handlers/           # Gin route handlers (one file per domain)
-│   │   ├── middleware/         # auth, rate limiter, security headers
+│   │   ├── middleware/         # auth, admin, rate limiter, security headers
 │   │   ├── models/models.go    # ALL GORM models in one file
 │   │   └── services/           # business logic; the only layer with tests
 │   ├── migrations/             # raw SQL migrations (applied by postgres init)
 │   ├── pkg/database/database.go
 │   ├── go.mod
-│   └── Dockerfile              # multi-stage: builder → final scratch image
-└── frontend/
-    ├── src/
-    │   ├── features/           # domain-sliced feature modules
-    │   │   ├── builder/        # visual network builder (main feature)
-    │   │   ├── admin/
-    │   │   ├── auth/
-    │   │   ├── catalog/
-    │   │   └── shopping/
-    │   ├── components/         # shared UI components
-    │   ├── lib/api.ts          # base axios instance
-    │   └── types/index.ts      # shared TypeScript types
-    ├── vite.config.ts
-    └── package.json
+│   ├── Dockerfile              # multi-stage: builder → final scratch image
+│   └── Dockerfile.test         # test runner image
+├── hlbipam/                    # standalone IPAM microservice
+│   ├── cmd/server/             # entrypoint
+│   ├── internal/
+│   │   ├── api/                # HTTP handlers
+│   │   ├── core/               # allocator, subnet, types, validator
+│   │   ├── models/             # data models
+│   │   └── utils/              # utility functions
+│   ├── Dockerfile
+│   ├── Dockerfile.test
+│   ├── go.mod
+│   └── test_ipam.go            # integration test script
+├── discord-bot/                # placeholder (empty)
+├── frontend/
+│   ├── src/
+│   │   ├── features/           # domain-sliced feature modules
+│   │   │   ├── admin/          # admin dashboard & management
+│   │   │   ├── auth/           # authentication (Google OAuth, profile)
+│   │   │   ├── builder/        # visual network builder (main feature)
+│   │   │   ├── catalog/        # hardware & service catalog browsing
+│   │   │   ├── donate/         # donation page
+│   │   │   ├── landing/        # landing/login page
+│   │   │   ├── setup-guide/    # setup checklist
+│   │   │   ├── shopping/       # shopping list generation
+│   │   │   └── survey/         # beta survey
+│   │   ├── components/         # shared UI components
+│   │   │   ├── auth/           # auth guards (RequireAuth)
+│   │   │   ├── icons/          # icon components
+│   │   │   ├── layout/         # sidebar, main layout
+│   │   │   └── ui/             # design system primitives (button, dialog, etc.)
+│   │   ├── lib/                # shared utilities
+│   │   │   ├── api.ts          # base axios instance
+│   │   │   ├── templates.ts    # config templates
+│   │   │   └── utils.ts        # general utilities
+│   │   ├── services/           # shared service layer (api.ts)
+│   │   ├── types/index.ts      # shared TypeScript types
+│   │   ├── App.tsx             # root component with routing
+│   │   └── main.tsx            # React entry point
+│   ├── vite.config.ts
+│   └── package.json
+└── docs/
+    └── ARCHITECTURE.md         # copy of this file
 ```
 
 ---
@@ -91,6 +122,34 @@ HTTP Request → Gin Router → Middleware → Handler → Service → GORM → 
 - **Services** (`internal/services/`): All business logic. Receive `*gorm.DB` (or a transaction). Are the only layer covered by automated tests.
 - **Models** (`internal/models/models.go`): GORM structs. All models are in a single file.
 
+### Middleware
+
+| File | Responsibility |
+|---|---|
+| `auth.go` | JWT-based `AuthMiddleware` and `AuthMiddlewareWithUser` (loads full user model) |
+| `admin.go` | `AdminRequired()` — checks `IsAdmin` flag on loaded user |
+| `rate_limiter.go` | Per-IP rate limiting for sensitive endpoints (login) |
+| `security.go` | `SecurityHeaders()` — standard security response headers |
+
+### Handlers
+
+| File | Responsibility |
+|---|---|
+| `auth.go` | Google OAuth login, dev login, get current user, update preferences |
+| `build_handler.go` | Build CRUD, duplicate, calculate-network, validate-network |
+| `hardware_handler.go` | Public hardware catalog + admin CRUD, bulk import, approve, buy URLs |
+| `services.go` | Service CRUD + community submission |
+| `recommendations.go` | Generate recommendations |
+| `shopping_list.go` | Generate shopping list |
+| `selections.go` | User service selections CRUD |
+| `admin_handler.go` | Admin dashboard, user list, service management, events |
+| `config_handler.go` | Config generation for builds |
+| `steering_handler.go` | Steering rules CRUD (admin) |
+| `catalog_component_handler.go` | Catalog component CRUD |
+| `donate_handler.go` | Donation progress read/update |
+| `survey_handler.go` | Beta survey CRUD |
+| `health.go` | Health check endpoint |
+
 ### Key Services
 
 | File | Responsibility |
@@ -98,8 +157,15 @@ HTTP Request → Gin Router → Middleware → Handler → Service → GORM → 
 | `build_service.go` | CRUD for builds; syncs ReactFlow JSON → relational `nodes`/`edges` tables |
 | `ip_service.go` | Graph-aware BFS IP assignment per subnet |
 | `auth_service.go` | Google OAuth token verification, JWT issuance |
-| `hardware_service.go` | Hardware catalog queries |
+| `hardware_service.go` | Hardware catalog queries + admin operations |
 | `recommendation_service.go` | Service/hardware recommendations based on selections |
+| `service_service.go` | Service catalog CRUD + community submissions |
+| `shopping_service.go` | Shopping list generation from build data |
+| `selection_service.go` | User service selections |
+| `config_service.go` | Network config generation (e.g. router configs) |
+| `steering_service.go` | Affiliate steering rules per hardware category |
+| `catalog_component_service.go` | Catalog component CRUD |
+| `analytics_service.go` | Analytics tracking (available for future handler integration) |
 
 ### Build Sync Flow
 
@@ -108,6 +174,31 @@ When a build is saved (`PUT /builds/:id`), `BuildService.Update` calls `SyncData
 2. Deletes all existing nodes/edges for the build.
 3. Re-inserts nodes and edges from the JSON.
 4. IMPORTANT: `Preload("Nodes.VirtualMachines")` is required on all build fetches or VMs disappear from responses.
+
+---
+
+## HLBIPAM Microservice
+
+A standalone Go microservice (`hlbipam/`) responsible for IP Address Management. Runs as a separate Docker container on port 8081.
+
+### Structure
+
+```
+hlbipam/
+├── cmd/server/          # HTTP server entrypoint
+├── internal/
+│   ├── api/             # HTTP route handlers
+│   ├── core/            # Core logic
+│   │   ├── allocator.go # IP allocation engine
+│   │   ├── subnet.go    # Subnet calculations
+│   │   ├── types.go     # Data types for network topology
+│   │   └── validator.go # Network validation rules
+│   ├── models/          # Data models
+│   └── utils/           # Utility functions
+└── test_ipam.go         # Integration test script
+```
+
+The backend communicates with HLBIPAM via `IPAM_URL` (default: `http://hlbipam:8081`).
 
 ---
 
@@ -131,15 +222,45 @@ If `calculateNetwork` runs before `update`, the backend reads stale/empty relati
 
 ### Feature Structure
 
-Each feature under `src/features/` follows the same pattern:
+Each feature under `src/features/` follows this general pattern (not all subdirs are present in every feature):
 ```
 feature/
 ├── api/       # axios calls (typed with backend DTOs)
 ├── components/
+├── data/      # static data / constants (e.g. shopping feature)
 ├── hooks/
+├── lib/       # feature-specific utilities (e.g. builder, auth)
 ├── pages/
 └── store/     # Zustand store (builder feature only)
 ```
+
+### Frontend Features
+
+| Feature | Description |
+|---|---|
+| `builder/` | Visual network builder — the main feature (ReactFlow canvas, node management, IP display) |
+| `admin/` | Admin dashboard, user management, service/hardware admin, steering rules, catalog components |
+| `auth/` | Login page (Google OAuth), profile page |
+| `catalog/` | Public hardware & service catalog browsing |
+| `shopping/` | Shopping list generation from build data |
+| `donate/` | Donation page with progress tracking |
+| `landing/` | Landing page shown to unauthenticated users |
+| `setup-guide/` | Interactive setup checklist |
+| `survey/` | Beta user survey |
+
+### Routing (App.tsx)
+
+| Path | Component | Auth Required |
+|---|---|---|
+| `/` | `ProjectsPage` (logged in) / `LoginPage` (guest) | No |
+| `/builder/:id` | `VisualBuilderPage` | Yes |
+| `/generate` | `ConfigGeneratorPage` | Yes |
+| `/admin` | `AdminPage` | Yes |
+| `/profile` | `ProfilePage` | Yes |
+| `/donate` | `DonatePage` | Yes |
+| `/checklist` | `ChecklistPage` | Yes |
+| `/hardware` | `HardwareCatalogPage` | No |
+| `/services` | `ServiceCatalogPage` | No |
 
 ---
 
@@ -149,7 +270,7 @@ Primary entities and their relationships:
 
 ```
 User ──< Build ──< Node ──< VirtualMachine
-                  Node ──< Edge (source/target are Node IDs)
+                   Node ──< Edge (source/target are Node IDs)
 Service ──< ServiceRequirement
 UserSelection >── User
 UserSelection >── Service
@@ -256,9 +377,18 @@ hasPrefix(s, prefix string) bool
 | File | Package | Tests |
 |---|---|---|
 | `internal/services/testhelpers_test.go` | `services` | Infrastructure (TestMain, helpers) |
-| `internal/services/build_service_test.go` | `services` | 10 build CRUD tests |
-| `internal/services/ip_service_test.go` | `services` | 11 DB tests + 5 pure unit tests |
-| `frontend/src/features/builder/store/builder-store.test.ts` | — | 14 Vitest tests |
+| `internal/services/build_service_test.go` | `services` | Build CRUD tests |
+| `internal/services/ip_service_test.go` | `services` | DB tests + pure unit tests |
+| `internal/services/auth_service_test.go` | `services` | Auth service tests |
+| `internal/services/hardware_service_test.go` | `services` | Hardware catalog tests |
+| `internal/services/recommendation_service_test.go` | `services` | Recommendation generation tests |
+| `internal/services/service_service_test.go` | `services` | Service catalog tests |
+| `internal/services/shopping_service_test.go` | `services` | Shopping list tests |
+| `internal/services/steering_service_test.go` | `services` | Steering rules tests |
+| `internal/handlers/health_test.go` | `handlers` | Health endpoint test |
+| `hlbipam/internal/core/allocator_test.go` | `core` | IPAM allocator tests |
+| `hlbipam/internal/core/validator_test.go` | `core` | IPAM validator tests |
+| `frontend/src/features/builder/store/builder-store.test.ts` | — | Vitest tests |
 
 ### Test Database
 
@@ -394,10 +524,18 @@ These bugs were diagnosed and fixed; tests guard against regression.
 | `DB_PASSWORD` | `homelab_password` | PostgreSQL password |
 | `DB_NAME` | `homelab_builder` | Production database name |
 | `DB_SSLMODE` | `disable` | PostgreSQL SSL mode |
+| `DB_TYPE` | `postgres` | Database driver type |
 | `TEST_DB_NAME` | `homelab_builder_test` | Test database name (used by TestMain) |
 | `JWT_SECRET` | — | Secret for signing JWTs |
 | `GOOGLE_CLIENT_ID` | — | Google OAuth client ID |
 | `SERVER_PORT` | `8080` | HTTP listen port |
+| `IPAM_URL` | `http://hlbipam:8081` | HLBIPAM microservice URL |
+
+### HLBIPAM
+
+| Variable | Default | Description |
+|---|---|---|
+| `PORT` | `8081` | HTTP listen port |
 
 ### Frontend (Vite build args)
 
