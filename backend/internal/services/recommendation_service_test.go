@@ -52,7 +52,7 @@ func TestRecommendationService_Generate(t *testing.T) {
 		Category: "server",
 		Brand:    "Dell",
 		Model:    "R720",
-		PriceEst: 250,
+		PriceEst: 100,
 		Approved: true,
 		Spec:     json.RawMessage(`{"cpu":"2x Intel Xeon E5-2660v2","ram":"32GB DDR3"}`),
 	}

@@ -32,7 +32,7 @@ export function Sidebar({ className }: { className?: string }) {
   const navigate = useNavigate()
   
   const { data: donation } = useDonationProgress()
-  const donationGoal = 250
+  const donationGoal = 100
   const donationCurrent = donation?.current || 0
 
   // BETA_SURVEY

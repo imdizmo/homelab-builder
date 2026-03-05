@@ -13,7 +13,7 @@ export default function DonatePage() {
     const [adminCurrent, setAdminCurrent] = useState("")
 
     const current = progress?.current || 0
-    const target = progress?.target || 250
+    const target = progress?.target || 100
     const percentage = Math.min(100, Math.round((current / target) * 100))
 
     const handleAdminUpdate = () => {
@@ -89,7 +89,7 @@ export default function DonatePage() {
                     </p>
                     <p>
                         To host this open beta version of HLBuilder, I had to cover the server costs out of my own pocket. 
-                        I've set a goal of <strong>$250</strong> to cover these ongoing beta hosting expenses, and to eventually buy a better, dedicated server for the official 1.0 release. 
+                        I've set a goal of <strong>$100</strong> to cover these ongoing beta hosting expenses, and to eventually buy a better, dedicated server for the official 1.0 release. 
                     </p>
                     <p>
                         <em>Full disclosure:</em> This app is about <strong>70% "vibecoded"</strong> with AI and <strong>30% organically coded</strong> by my own hands (especially those tricky parts I just had to wire up myself). Building all this with love requires funds to pay for AI subscriptions like Antigravity! 🚀
@@ -102,7 +102,7 @@ export default function DonatePage() {
                     </div>
                     <div className="bg-primary/5 border border-primary/20 p-4 rounded-xl space-y-2">
                         <p className="font-semibold text-primary m-0">
-                            If the $250 goal is reached, I promise to release the full source code of HLBuilder entirely for free so the community can self-host and contribute under the GNU Affero license.
+                            If the $100 goal is reached, I promise to release the full source code of HLBuilder entirely for free so the community can self-host and contribute under the GNU Affero license.
                         </p>
                         <p className="text-sm text-foreground/80 m-0">
                             <em>Note: Even if the goal isn't fully met, the app will still go open source in a maximum of 1-3 months after the beta releases, depending on what the community thinks and says! 🤝</em>

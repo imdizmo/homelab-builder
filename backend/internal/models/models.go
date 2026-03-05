@@ -287,11 +287,11 @@ type BetaSurvey struct {
 func (BetaSurvey) TableName() string { return "beta_surveys" } // BETA_SURVEY
 // ─── END BETA_SURVEY ──────────────────────────────────────────────────────────
 
-// DonationProgress tracks the global funding goal towards $250.
+// DonationProgress tracks the global funding goal towards $100.
 type DonationProgress struct {
 	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
 	Current   int       `gorm:"default:0" json:"current"`  // Amount in whole dollars
-	Target    int       `gorm:"default:250" json:"target"` // Target amount
+	Target    int       `gorm:"default:100" json:"target"` // Target amount
 	UpdatedAt time.Time `json:"updated_at"`
 }
 

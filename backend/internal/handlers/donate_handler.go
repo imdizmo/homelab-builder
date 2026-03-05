@@ -27,7 +27,7 @@ func (h *DonateHandler) GetProgress(c *gin.Context) {
 			// Initialize row
 			progress = models.DonationProgress{
 				Current: 0,
-				Target:  250,
+				Target:  100,
 			}
 			if createErr := h.db.Create(&progress).Error; createErr != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to initialize donation progress"})
@@ -59,7 +59,7 @@ func (h *DonateHandler) UpdateProgress(c *gin.Context) {
 		if err == gorm.ErrRecordNotFound {
 			progress = models.DonationProgress{
 				Current: input.Current,
-				Target:  250,
+				Target:  100,
 			}
 			if input.Target > 0 {
 				progress.Target = input.Target
