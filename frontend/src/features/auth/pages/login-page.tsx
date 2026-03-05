@@ -46,6 +46,12 @@ export default function LoginPage() {
                     <p className="text-sm text-muted-foreground">Browse 100+ community curated components with specs and pricing.</p>
                 </Link>
             </div>
+
+            <div className="mt-12 flex items-center justify-center gap-3 text-xs text-muted-foreground/60">
+                <Link to="/privacy" className="hover:text-muted-foreground transition-colors">Privacy Policy</Link>
+                <span>·</span>
+                <Link to="/terms" className="hover:text-muted-foreground transition-colors">Terms of Service</Link>
+            </div>
         </div>
     )
 }

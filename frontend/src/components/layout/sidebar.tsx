@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { NavLink, useNavigate } from "react-router-dom"
+import { NavLink, useNavigate, Link } from "react-router-dom"
 import { LayoutDashboard, CheckSquare, Settings, HardDrive, FileCode, ChevronsLeft, ChevronsRight, Heart, Globe, X, ClipboardList, CheckCircle2 } from "lucide-react"
 import { Github } from "../icons/github"
 import { cn } from "../../lib/utils"
@@ -168,6 +168,15 @@ export function Sidebar({ className }: { className?: string }) {
           <X className="h-4 w-4" />
         </a>
       </div>
+
+      {/* Legal links */}
+      {!collapsed && (
+        <div className="px-4 pb-1 flex items-center justify-center gap-2 text-xs text-muted-foreground/60">
+          <Link to="/privacy" className="hover:text-muted-foreground transition-colors">Privacy</Link>
+          <span>·</span>
+          <Link to="/terms" className="hover:text-muted-foreground transition-colors">Terms</Link>
+        </div>
+      )}
 
       {/* DONATE - Glowing funding goal button */}
       <div className="border-t px-2 pt-2 shrink-0">
