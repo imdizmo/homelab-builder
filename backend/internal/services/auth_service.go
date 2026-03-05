@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Butterski/homelab-builder/backend/internal/models"
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"google.golang.org/api/idtoken"
@@ -22,10 +23,21 @@ type AuthService struct {
 }
 
 func NewAuthService(db *gorm.DB) *AuthService {
-	secret := os.Getenv("JWT_SECRET")
+	rawSecret := os.Getenv("JWT_SECRET")
+	defaultSecret := "homelab-builder-dev-secret-change-in-production"
+
+	secret := rawSecret
 	if secret == "" {
-		secret = "homelab-builder-dev-secret-change-in-production"
+		secret = defaultSecret
 	}
+
+	// SECURITY FIX: Refuse to start in production with a weak or default JWT secret
+	if gin.Mode() == gin.ReleaseMode {
+		if rawSecret == "" || rawSecret == defaultSecret || rawSecret == "change-this-in-production" {
+			panic("CRITICAL SECURITY ERROR: JWT_SECRET MUST be set to a strong, unique value in production (GIN_MODE=release). Refusing to start.")
+		}
+	}
+
 	clientID := os.Getenv("GOOGLE_CLIENT_ID")
 	return &AuthService{
 		db:        db,
