@@ -47,9 +47,9 @@ func (h *AdminHandler) Dashboard(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
-			"service_count":    serviceCount,
-			"user_count":       userCount,
-			"event_count":      eventCount,
+			"total_services":   serviceCount,
+			"total_users":      userCount,
+			"total_selections": eventCount,
 			"popular_services": popular,
 		},
 	})

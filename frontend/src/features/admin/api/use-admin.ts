@@ -12,7 +12,7 @@ export const useAdminStats = () => {
     return useQuery({
         queryKey: ["admin", "stats"],
         queryFn: async () => {
-            const response = await api.get<{ data: AdminStats }>("/api/admin/stats")
+            const response = await api.get<{ data: AdminStats }>("/api/admin/dashboard")
             return response.data
         },
     })
