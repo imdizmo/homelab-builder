@@ -1,6 +1,6 @@
-# Homelab Builder Roadmap & Ideas
+# HLBuilder Roadmap & Ideas
 
-This document outlines the original Minimum Viable Product (MVP) goals and future ideas for Homelab Builder, translated from the initial planning phases.
+This document outlines the original Minimum Viable Product (MVP) goals and future ideas for HLBuilder, translated from the initial planning phases.
 
 ## 1. Fast Start & Easy Onboarding
 Users may be overwhelmed by the number of services and hardware components.

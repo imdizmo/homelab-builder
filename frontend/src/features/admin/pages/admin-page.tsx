@@ -5,7 +5,7 @@ import { Skeleton } from "../../../components/ui/skeleton"
 import { LoadingScreen } from "../../../components/ui/loading-screen"
 import { ServicesTable } from "../components/services-table"
 import { AdminHardwareManager } from "../components/hardware-manager"
-import { AffiliateLinksManager } from "../components/affiliate-links-manager"
+// import { AffiliateLinksManager } from "../components/affiliate-links-manager"
 import { SteeringRulesManager } from "../components/steering-rules-manager"
 import { CatalogComponentsManager } from "../components/catalog-components-manager"
 import { useState } from "react"
@@ -62,7 +62,16 @@ export default function AdminPage() {
         </div>
       )}
       {tab === "hardware" && <AdminHardwareManager />}
-      {tab === "links" && <AffiliateLinksManager />}
+      {tab === "links" && (
+        <div className="flex flex-col items-center justify-center p-12 border border-dashed rounded-xl bg-muted/10 text-center space-y-3">
+          <div className="text-4xl">⏳</div>
+          <h3 className="text-xl font-bold">Coming Soon</h3>
+          <p className="text-muted-foreground max-w-md">
+            Affiliate Links Management is disabled for the Open Beta. This feature is reserved for future implementation to support community funding.
+          </p>
+        </div>
+        // <AffiliateLinksManager />
+      )}
       {tab === "steering" && <SteeringRulesManager />}
       {tab === "mass-planner" && <CatalogComponentsManager />}
     </div>

@@ -15,6 +15,7 @@ const ServiceCatalogPage = lazy(() => import('./features/catalog/pages/service-c
 const ChecklistPage = lazy(() => import('./features/setup-guide/pages/checklist-page'));
 const ConfigGeneratorPage = lazy(() => import('./features/builder/pages/config-generator-page'));
 const ProfilePage = lazy(() => import('./features/auth/pages/profile-page'));
+const DonatePage = lazy(() => import('./features/donate/pages/donate-page'));
 import { RequireAuth } from './components/auth/require-auth';
 import { Sidebar } from './components/layout/sidebar';
 import { ThemeToggle } from './components/theme-toggle'; 
@@ -68,10 +69,11 @@ function AppContent() {
                 <Route path="/generate" element={<RequireAuth><ConfigGeneratorPage /></RequireAuth>} />
                 <Route path="/admin" element={<RequireAuth><AdminPage /></RequireAuth>} />
                 <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
+                <Route path="/donate" element={<RequireAuth><DonatePage /></RequireAuth>} />
+                <Route path="/checklist" element={<RequireAuth><ChecklistPage /></RequireAuth>} />
                 {/* Public catalog routes */}
                 <Route path="/hardware" element={<HardwareCatalogPage />} />
                 <Route path="/services" element={<ServiceCatalogPage />} />
-                <Route path="/checklist" element={<ChecklistPage />} />
               </Routes>
             </Suspense>
         </main>

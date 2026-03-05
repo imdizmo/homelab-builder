@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an idea for Homelab Builder
+about: Suggest an idea for HLBuilder
 title: "[FEAT] "
 labels: enhancement
 assignees: ''

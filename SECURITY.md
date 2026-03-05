@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Currently only the `master` version of Homelab Builder is actively supported for security updates.
+Currently only the `master` version of HLBuilder is actively supported for security updates.
 
 | Version | Supported          |
 | ------- | ------------------ |
@@ -11,7 +11,7 @@ Currently only the `master` version of Homelab Builder is actively supported for
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability within Homelab Builder, please do NOT post it on the public GitHub issue tracker. 
+If you discover a security vulnerability within HLBuilder, please do NOT post it on the public GitHub issue tracker. 
 
 Instead, please send an e-mail to the repository owner directly or use GitHub's private vulnerability reporting feature on this repository. We will attempt to address and resolve the vulnerability as quickly as possible.
 

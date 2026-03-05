@@ -8,6 +8,7 @@ import { useBuilderStore } from "../../features/builder/store/builder-store"
 import { GoogleLoginButton } from "../auth/google-login-button"
 import { LayoutTemplate } from "lucide-react"
 import { Logo } from "../ui/logo"
+import { useDonationProgress } from "../../features/donate/api/use-donate"
 // BETA_SURVEY
 import { useSurvey } from "../../features/survey/api/use-survey"
 import { SurveyModal } from "../../features/survey/components/survey-modal"
@@ -28,6 +29,11 @@ export function Sidebar({ className }: { className?: string }) {
   const { user } = useAuth()
   const { currentBuildId } = useBuilderStore()
   const navigate = useNavigate()
+  
+  const { data: donation } = useDonationProgress()
+  const donationGoal = 250
+  const donationCurrent = donation?.current || 0
+
   // BETA_SURVEY
   const [showSurvey, setShowSurvey] = useState(false)
   const { data: survey } = useSurvey()
@@ -161,6 +167,43 @@ export function Sidebar({ className }: { className?: string }) {
         <a href="https://x.com/sretub" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" title="X (Twitter)">
           <X className="h-4 w-4" />
         </a>
+      </div>
+
+      {/* DONATE - Glowing funding goal button */}
+      <div className="border-t px-2 pt-2 shrink-0">
+        <NavLink
+          to="/donate"
+          title="Support the Project"
+          className={({ isActive }) => cn(
+            "relative w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 overflow-hidden group",
+            isActive 
+              ? "bg-pink-500/15 text-pink-500" 
+              : "text-pink-500/80 hover:bg-pink-500/10 hover:text-pink-500",
+            collapsed && "justify-center px-2"
+          )}
+        >
+          {/* Subtle animated background shimmer */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-pink-500/10 to-transparent -translate-x-full animate-[shimmer_3s_infinite]" />
+          
+          <Heart className={cn("shrink-0 transition-transform group-hover:scale-110", collapsed ? "h-5 w-5" : "h-4 w-4")} />
+          
+          <div className={cn(
+            "flex flex-col flex-1 whitespace-nowrap transition-all duration-300",
+            collapsed ? "opacity-0 w-0" : "opacity-100"
+          )}>
+            <div className="flex justify-between items-center w-full">
+              <span>Donate</span>
+              <span className="text-xs opacity-80">${donationCurrent} / ${donationGoal}</span>
+            </div>
+            {/* Mini progress bar under text */}
+            <div className="h-1 w-full bg-pink-500/20 rounded-full mt-1 overflow-hidden">
+              <div 
+                className="h-full bg-pink-500 transition-all duration-1000" 
+                style={{ width: `${Math.min(100, Math.max(0, (donationCurrent / donationGoal) * 100))}%` }} 
+              />
+            </div>
+          </div>
+        </NavLink>
       </div>
 
       {/* BETA_SURVEY - Glowing survey button */}

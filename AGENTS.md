@@ -1,4 +1,4 @@
-# Homelab Builder — AI Agent Reference
+# HLBuilder — AI Agent Reference
 
 This document is the canonical reference for AI agents working on this codebase.
 It covers project architecture, testing infrastructure, known pitfalls, and the decisions behind them.
@@ -32,7 +32,7 @@ Remember - I don't want migrations scripts or Legacy things support. If somethin
 
 ## Project Overview
 
-**Homelab Builder** is a full-stack web app that lets users visually design their home lab network — placing hardware nodes (routers, switches, servers, NAS, etc.), wiring them, and automatically receiving IP address assignments and service recommendations.
+**HLBuilder** is a full-stack web app that lets users visually design their home lab network — placing hardware nodes (routers, switches, servers, NAS, etc.), wiring them, and automatically receiving IP address assignments and service recommendations.
 
 - **Backend**: Go 1.24.5, Gin, GORM v1.31.1, PostgreSQL 15
 - **Frontend**: React 18, TypeScript, Vite, ReactFlow, Zustand, Vitest

@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	log.Println("Starting Homelab Builder Backend...")
+	log.Println("Starting HLBuilder Backend...")
 	cfg := config.Load()
 
 	db, err := database.Connect(cfg)
@@ -153,6 +153,10 @@ func setupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 			protected.PUT("/survey", surveyHandler.UpdateSurvey)
 		}
 
+		// Donation handling
+		donateHandler := handlers.NewDonateHandler(db)
+		api.GET("/donations", donateHandler.GetProgress)
+
 		// Admin routes (require authentication + admin role)
 		admin := router.Group("/admin")
 		// Use AuthMiddlewareWithUser to load the full User model so is_admin check works
@@ -186,6 +190,9 @@ func setupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 			admin.POST("/catalog-components", catalogCompHandler.Create)
 			admin.PUT("/catalog-components/:id", catalogCompHandler.Update)
 			admin.DELETE("/catalog-components/:id", catalogCompHandler.Delete)
+
+			// Donations
+			admin.PUT("/donations", donateHandler.UpdateProgress)
 		}
 	}
 
