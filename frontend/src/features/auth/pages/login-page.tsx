@@ -1,7 +1,9 @@
 import { GoogleLoginButton } from "../../../components/auth/google-login-button"
-import { Server, ShoppingCart, CheckSquare } from "lucide-react"
+import { Server, ShoppingCart, CheckSquare, Globe, Heart, X } from "lucide-react"
 import { Link } from "react-router-dom"
 import { AnimatedLogo } from "../../../components/ui/animated-logo"
+import { Github } from "../../../components/icons/github"
+import { Discord } from "../../../components/icons/discord"
 
 export default function LoginPage() {
     return (
@@ -48,7 +50,25 @@ export default function LoginPage() {
                 </Link>
             </div>
 
-            <div className="mt-12 flex items-center justify-center gap-3 text-xs text-muted-foreground/60">
+            <div className="mt-12 flex items-center justify-center gap-5">
+                <a href="https://github.com/Butterski/homelab-builder" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" title="Project Site">
+                    <Globe className="h-4 w-4" />
+                </a>
+                <a href="https://github.com/Butterski" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" title="GitHub">
+                    <Github className="h-4 w-4" />
+                </a>
+                <a href="https://github.com/sponsors/Butterski" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-pink-500 transition-colors" title="Sponsor">
+                    <Heart className="h-4 w-4" />
+                </a>
+                <a href="https://x.com/sretub" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" title="X (Twitter)">
+                    <X className="h-4 w-4" />
+                </a>
+                <a href="https://discord.gg/8PQb2M2fBB" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-indigo-500 transition-colors" title="Discord">
+                    <Discord className="h-4 w-4" />
+                </a>
+            </div>
+
+            <div className="mt-3 flex items-center justify-center gap-3 text-xs text-muted-foreground/60">
                 <Link to="/privacy" className="hover:text-muted-foreground transition-colors">Privacy Policy</Link>
                 <span>·</span>
                 <Link to="/terms" className="hover:text-muted-foreground transition-colors">Terms of Service</Link>
