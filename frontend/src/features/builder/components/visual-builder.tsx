@@ -359,7 +359,7 @@ function Flow() {
                 position
             });
         },
-        [screenToFlowPosition, getIntersectingNodes, addHardware, addInternalComponent, addVM, setPendingComponent, setPendingNode],
+        [screenToFlowPosition, getIntersectingNodes, addHardware, addInternalComponent, addVM, setPendingComponent, setPendingNode, pendingComponent],
     );
 
     const isValidConnection = useCallback((connection: any) => {
@@ -368,30 +368,38 @@ function Flow() {
         
         if (!sourceNode || !targetNode) return false;
 
-        // Ensure physical port is not already occupied on the SOURCE side
-        const isSourceHandleUsed = edges.some(e => 
-            (e.source === connection.source && e.sourceHandle === connection.sourceHandle) ||
-            (e.target === connection.source && e.targetHandle === connection.sourceHandle)
-        );
-        if (isSourceHandleUsed) {
-            toast.error("Source port is already in use.");
-            return false;
+        // If it's a power unit, it can connect to anything and bypass port occupancy
+        const isPowerConnection = 
+            sourceNode.type === 'ups' || targetNode.type === 'ups' || 
+            sourceNode.type === 'pdu' || targetNode.type === 'pdu';
+        
+        if (!isPowerConnection) {
+            // Ensure physical port is not already occupied on the SOURCE side
+            const isSourceHandleUsed = edges.some(e => 
+                (e.source === connection.source && e.sourceHandle === connection.sourceHandle) ||
+                (e.target === connection.source && e.targetHandle === connection.sourceHandle)
+            );
+            if (isSourceHandleUsed) {
+                toast.error("Source port is already in use.");
+                return false;
+            }
+
+            // Ensure physical port is not already occupied on the TARGET side
+            const isTargetHandleUsed = edges.some(e => 
+                (e.source === connection.target && e.sourceHandle === connection.targetHandle) ||
+                (e.target === connection.target && e.targetHandle === connection.targetHandle)
+            );
+            if (isTargetHandleUsed) {
+                toast.error("Target port is already in use.");
+                return false;
+            }
         }
 
-        // Ensure physical port is not already occupied on the TARGET side
-        const isTargetHandleUsed = edges.some(e => 
-            (e.source === connection.target && e.sourceHandle === connection.targetHandle) ||
-            (e.target === connection.target && e.targetHandle === connection.targetHandle)
-        );
-        if (isTargetHandleUsed) {
-            toast.error("Target port is already in use.");
-            return false;
-        }
-
-        // A router switch and hba can connect to anything
+        // A router switch, hba, ups and pdu can connect to anything
         if (sourceNode.type === 'switch' || sourceNode.type === 'router' ||
             targetNode.type === 'switch' || targetNode.type === 'router' ||
-            sourceNode.type === 'hba' || targetNode.type === 'hba') {
+            sourceNode.type === 'hba' || targetNode.type === 'hba' ||
+            isPowerConnection) {
             return true;
         }
 
