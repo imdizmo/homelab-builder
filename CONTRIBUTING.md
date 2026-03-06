@@ -4,21 +4,73 @@ First, thanks for taking the time to contribute!
 
 ## Development Setup
 
-1. Clone the repository
+1. Fork the repository (or clone it if you have write access)
 2. Set up the environment variables (`cp .env.example .env`)
 3. Spin up the development environment using Docker:
    ```bash
    docker compose up -d
    ```
 
+## Branching Strategy
+
+We use a two-branch model:
+
+| Branch | Purpose |
+|--------|---------|
+| `master` | Stable, release-ready code. **Never push directly to master.** |
+| `dev` | Integration branch. All feature/fix branches are merged here first. |
+
+### Workflow
+
+```
+master (stable releases)
+  ↑ merge (maintainer only)
+dev (integration / staging)
+  ↑ pull request
+feature/your-feature-name  ← you work here
+```
+
+1. **Start from `dev`** — always branch off the latest `dev`:
+   ```bash
+   git checkout dev
+   git pull origin dev
+   git checkout -b feature/short-description
+   ```
+
+2. **Work on your branch** — make commits with clear messages. Keep the scope small (one feature or fix per branch).
+
+3. **Push and open a Pull Request into `dev`**:
+   ```bash
+   git push -u origin feature/short-description
+   ```
+   Then open a PR on GitHub targeting the **`dev`** branch (not `master`).
+
+4. **PR review & merge** — once CI passes and the PR is approved, it gets merged into `dev`.
+
+5. **Releases** — the maintainer periodically merges `dev` into `master` to cut a release.
+
+### Branch Naming Convention
+
+Use a descriptive prefix:
+
+| Prefix | Use for |
+|--------|---------|
+| `feature/` | New functionality (e.g., `feature/add-vlan-support`) |
+| `fix/` | Bug fixes (e.g., `fix/ip-collision-on-dual-router`) |
+| `docs/` | Documentation-only changes (e.g., `docs/update-readme`) |
+| `refactor/` | Code restructuring with no behavior change |
+| `test/` | Adding or updating tests |
+
 ## Pull Request Process
 
 We strictly follow a "One PR = One Feature/Fix" philosophy to keep reviews fast and code stable.
 
-1. Ensure any install or build dependencies are removed before the end of the layer when doing a build.
-2. Update the README.md with details of changes to the interface, if applicable.
-3. Your PR must pass all GitHub Action CI tests before it can be merged.
-4. If you have modified backend backend service logic, you MUST write an accompanying test in `*_test.go`.
+1. **Target branch: `dev`** — all PRs must target `dev`, not `master`.
+2. Ensure any install or build dependencies are removed before the end of the layer when doing a build.
+3. Update the README.md with details of changes to the interface, if applicable.
+4. Your PR must pass all GitHub Action CI tests before it can be merged.
+5. If you have modified backend service logic, you MUST write an accompanying test in `*_test.go`.
+6. Keep PRs focused — avoid mixing unrelated changes in a single PR.
 
 ## Code of Conduct
 
