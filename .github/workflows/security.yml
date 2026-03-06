@@ -1,9 +1,9 @@
 name: Security Analysis
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "dev" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "master", "dev" ]
   schedule:
     - cron: '27 15 * * 3' # Weekly scan
 
