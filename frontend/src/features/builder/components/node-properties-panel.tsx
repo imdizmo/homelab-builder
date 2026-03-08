@@ -15,6 +15,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import type { HardwareType } from '../../../types';
 import { VMManager } from './vm-manager';
 import { InternalComponentManager } from './internal-component-manager';
 import { canNodeHostVMs, nodeHasCPU, nodeHasRAM, nodeHasStorage, isNetworkNode } from '../../../lib/hardware-config';

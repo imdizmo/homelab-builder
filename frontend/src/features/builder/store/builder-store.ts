@@ -21,7 +21,6 @@ import type {
 } from '../../../types';
 import { buildApi, type Build } from '../api/builds';
 import { api } from '../../../services/api';
-import { isNetworkNode } from '../../../lib/hardware-config';
 
 // Removed hardcoded NON_NETWORK_TYPES and using isNetworkNode instead.
 
