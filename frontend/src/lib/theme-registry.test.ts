@@ -53,12 +53,12 @@ describe('theme registry', () => {
     const settings = themeSettingsFromPreferences({
       theme: 'light',
       themeSettings: {
-        activeThemeId: 'dracula',
+        activeThemeId: 'overwatch-light',
         customThemes: [],
       },
     });
 
-    expect(settings.activeThemeId).toBe('dracula');
+    expect(settings.activeThemeId).toBe('overwatch-light');
   });
 
   it('imports a single custom theme payload', () => {
